@@ -1,0 +1,230 @@
+.applyDiv {
+    margin:0 0 0 20px;
+}
+
+.applyDiv h3 {
+    margin-top: 12px;
+}
+
+.applyForm {
+    margin: 10px 0 0 80px;
+}
+
+.applyLabel {
+    display: inline-block;
+    width: 150px;
+    text-align: left;
+    height: 30px;
+}
+
+.authorization .ui.selection.dropdown {
+    min-height: 0;
+    height: 30px;
+    line-height: 0px;
+    width: 20rem;
+}
+
+.authorization .ui.selection.dropdown .text{
+    margin-top: 4px;
+}
+
+
+.applyUser {
+    width: 20rem;
+    border: 1px solid rgba(34,36,38,.15);
+    height: 30px;
+}
+
+.applyUserDate {
+    width: 9.5rem;
+    border: 1px solid rgba(34,36,38,.15);
+    height: 30px;
+}
+
+.applyForm div{
+    margin-top: 10px;
+}
+
+.applyWork {
+    display: inline-block;
+    width: 20rem;
+}
+
+
+.applyWork .ui.fluid.input  {
+    height: 30px;
+    margin-top: 0;
+}
+
+
+.applyWork .ui.input  {
+    width: 20rem;
+    height: 30px;
+    margin-top: 0;
+}
+
+.submit {
+    margin-left: 13rem;
+}
+
+.submit .ui.button {
+    background: #0D8FBF;
+    color: #fff;
+}
+
+.ui.modal .actions>.button:nth-child(1) {
+    display: none;
+}
+
+.errorTip {
+    margin-left: 10px;
+    color: red;
+}
+
+/* 申请列表样式 */
+#applyListDiv  .tableTtile {
+    margin: 10px 20px;
+    margin-top: 13px;
+  }
+
+  #applyTableList {
+      margin-top: -2px;
+  }
+
+  .operation {
+      display: inline-block;
+      color: #0D8FBF;
+      margin-right:15px;
+      cursor: default;
+  }
+
+
+  /* 授权书管理 */
+  #manage .manageTip {
+    margin: 30px;
+  }
+
+  #manageCard {
+      margin: 4rem;
+      margin-top: 2rem;
+      background: #0D8FBF;
+      width: 30rem;
+      height: 20rem;
+      border-radius: 5%;
+  }
+
+  #manageCard .manageTitle {
+    padding: 1rem 0 1rem 0.8rem;
+    color: #fff;
+  }
+
+  #manageCard div {
+      color: #fff;
+      margin: 0  0 1.5rem 0.8rem;
+  }
+
+  #manageCard div span:nth-child(2) {
+      margin-left: 1rem;
+  }
+
+/* 申请调用 */
+.userApplyDiv {
+    margin-top: 3rem;
+}
+
+.userApplyDiv .userSubmit {
+    margin: 3rem 0 0 13rem;
+}
+
+.userSubmit .ui.button {
+    background: #0D8FBF;
+    color: #fff;
+}
+
+
+/* DID生成 */
+#didApplyDiv {
+    margin:2rem;
+}
+#didApplyDiv div {
+    margin: 1rem 0 0 1rem;
+}
+
+#didApplyDiv div label:nth-child(1) {
+    display: inline-block;
+    width: 60px;
+    text-align: left;
+    height: 30px;
+}
+
+#didApplyDiv div:nth-child(2) label:nth-child(1) {
+    width: 130px;
+   
+}
+
+#didApplyDiv .userOfOrg {
+    display: inline-block;
+    margin: 0;
+}
+
+#didApplyDiv .userOfOrg .input{
+    margin: 0;
+    width:20rem !important;
+    height:30px;
+}
+
+
+/* 档案上传 */
+#uploadDocForm {
+    margin: 2rem 0 0 2rem;
+}
+
+#uploadDocForm div {
+    margin-bottom: 0.5rem;
+}
+
+.uploadDoc {
+    margin-top: 1rem;
+}
+
+.uploadDoc .uploadDocTitle {
+    font-weight: 1000;
+}
+
+.addButton {
+    color: #0D8FBF;
+    margin-top: 1rem;
+}
+
+#buttonOperate {
+    margin: 1rem 12rem;
+}
+#buttonOperate .button:nth-child(1) {
+    margin-right: 2rem;
+}
+
+.uploadDocTxt .docName {
+    margin-top: 1rem;
+    display: inline-block;
+}
+
+.uploadDocTxt .deleteDoc {
+    color: #0D8FBF;
+    margin-left: 1rem;
+    margin-top: 1rem;
+    display: inline-block;
+}
+
+#uploadDocForm .authorization .ui.selection.dropdown {
+    min-height: 0;
+    height: 30px;
+    line-height: 0px;
+    width: 20rem;
+}
+
+#applyListDiv {
+    margin-top: 2px;
+}
+#applyListDiv #applyTableList .operation {
+    width: 65%;
+}

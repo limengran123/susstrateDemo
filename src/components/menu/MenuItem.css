@@ -1,0 +1,35 @@
+#menuData {
+  display: inline-flex;
+  flex: 0
+}
+
+.MenuItem{
+  text-align:center;
+  font-size:14px;
+  color:#fff;
+  line-height: 40px;
+  background: none !important;
+}
+
+#menuData .ui.inverted.menu .active.item {
+  width: 200px !important;
+  background: #EEEEEE !important;
+  color: #000 !important;
+}
+
+#menuData .ui.pointing.menu .active.item:after {
+  visibility: hidden;
+}
+
+
+#menuData .ui.vertical.menu>.active.item:first-child {
+  border-radius: 0;
+}
+
+#menuData .ui.vertical.menu>.active.item:only-child {
+  border-radius: 0;
+}
+
+#menuData .ui.vertical.menu>.active.item:last-child {
+  border-radius: 0;
+}

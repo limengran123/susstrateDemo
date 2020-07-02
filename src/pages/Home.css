@@ -1,0 +1,181 @@
+.Home{
+  width:100%;
+  height:calc(100% - 60px);
+  background:#fff;
+}
+.leftMenu{
+  width:200px;
+  /* height:calc(100% - 60px); */
+  background:rgba(0,0,0,.8)
+}
+.content{
+  display: inline-flex;
+  flex: 1;
+}
+
+.fintech {
+  margin-left: 24px;
+  width: 200px;
+  height:160px;
+  margin-top:-45px;
+}
+
+.fintechtext {
+  margin-top:-100px;
+  margin-left: 240px;
+  font-size: 16px;
+  color: #fff;
+}
+
+.ccb {
+  margin-left: 24px;
+  width: 200px;
+  height:40px;
+  margin-top:10px;
+}
+
+.ccbtext {
+  margin-top:-35px;
+  margin-left: 240px;
+  font-size: 16px;
+  color: #fff;
+}
+
+
+.police {
+  margin-left: 24px;
+  width: 55px;
+  height:40px;
+  margin-top:10px;
+}
+
+.policetext {
+  margin-top:-35px;
+  margin-left: 100px;
+  font-size: 16px;
+  color: #fff;
+}
+
+.policeUser {
+  margin-left: 24px;
+  width: 60px;
+  height:40px;
+  margin-top:10px;
+}
+
+.policeUsertext {
+  margin-top:-35px;
+  margin-left: 100px;
+  font-size: 16px;
+  color: #fff;
+}
+
+.userLogo {
+  float:right;
+  margin-top: -35px;
+  height: 24px;
+}
+
+.logoRadio {
+  width: 24px;
+  height: 24px;
+  background: #fff;
+  border: 1px solid #fff;
+  border-radius: 50%;
+  display: inline-block;
+}
+
+.logoUserName {
+  display: inline-block;
+  position: relative;
+  bottom: 5px;
+  height: 24px;
+  font-size: 18px;
+  color: #fff;
+  margin: 0 20px;
+}
+
+
+#contentBody {
+  display: flex;
+}
+
+#contentBody .content {
+  flex-grow: 1;
+}
+
+.didInfo {
+  display: flex;
+  flex-flow: row wrap; 
+  justify-content:center; 
+  align-items:center; 
+  color: #000;
+  font-size: 1rem;
+  margin: 50px;
+  padding-left: 38%;
+}
+
+.didInfo div {
+  flex: 1 100%;
+}
+
+
+.didTitle {
+  display: inline-block;
+  width: 6rem;
+  margin: 10px 0;
+}
+
+#backButton {
+  margin: 60px;
+  margin-right: 80%;
+}
+
+/* 指派人员登录页 */
+.userLoginLogo {
+  margin-left: 24px;
+  width: 55px;
+  height:40px;
+  margin-top:10px;
+}
+
+.logoTitle {
+  margin-top:-35px;
+  margin-left: 100px;
+  font-size: 16px;
+  color: #fff;
+}
+
+#userLoginContent {
+  display: flex;
+  flex-flow: row wrap; 
+  justify-content:center; 
+  align-items:center; 
+  color: #000;
+  font-size: 1rem;
+  margin: 10rem;
+  padding-left: 32%;
+}
+
+#userLoginContent div {
+  flex: 1 100%;
+}
+
+#userLoginContent .userLoginContentTitle {
+  margin-bottom: 1rem;
+}
+#userLoginContent .userLoginContentTitle span{
+  margin-right: 3rem;
+}
+
+#userLoginContent div:nth-child(2) label{
+  margin-right: 1rem;
+}
+
+.buttonArr {
+  margin-top: 6rem;
+  padding-left: 6rem;
+}
+.buttonArr #cancalButton{
+  margin: 0 1rem 0 -3rem;
+}
