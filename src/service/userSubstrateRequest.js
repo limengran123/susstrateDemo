@@ -8,7 +8,6 @@ const PROVIDER_SOCKET = "ws://10.200.3.12:9944";
 const CUSTOM_TYPES = {
     "Address": "AccountId", 
     "LookupSource": "AccountId",
-    // "Weight": 'u32',
     "Did": "Vec<u8>",
     "ArchId": "Vec<u8>",
     "DocHash": "Vec<u8>",

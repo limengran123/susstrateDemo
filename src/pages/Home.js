@@ -10,11 +10,15 @@ import React from 'react';
 import LeftMenu from '@/components/menu/LeftMenu';
 import Content from '@/components/content/Content';
 import { connect } from 'react-redux';
-import { Button } from 'semantic-ui-react';
+import { Button, Confirm, Loader } from 'semantic-ui-react';
 import "./Home.css";
 import http from '../service/httpRequest.js';
 import * as COMMON from '../tools/CommonConstant';
+import useSubstrate from '../service/userSubstrateRequest.js';
+import { u8aToString } from '@polkadot/util';
 
+const testKeyring = require('@polkadot/keyring/testing');
+const keyring = testKeyring.default();
 
 class Home extends React.Component {
   constructor(props) {
@@ -27,70 +31,105 @@ class Home extends React.Component {
       userType: "",
       organization: "",
       creationDate: "",
+      confirmOpen: false,
+      messageContent: "",
+      loaderState: 'disabled',
     }
   }
 
   componentDidMount() {
+    let userName = window.location ? window.location.pathname.slice(1) : "police";
+    let fileinforStr = localStorage.getItem('fileinformation');
+    let fileinformation = fileinforStr ? JSON.parse(fileinforStr) : {};
+    let name = fileinformation.name || "";
+    let loginName = "";
+    if (userName === "policeUser") {
+      loginName = name;
+    } else {
+      loginName = COMMON.ORG_TO_USERNAME[userName];
+    }
+
+    this.setState({
+      userLoginName: loginName,
+    })
+
+  }
+
+  userClick = () => {
+    this.setState({
+      loaderState: 'active',
+    })
     let fileinforStr = localStorage.getItem('fileinformation');
     let fileinformation = fileinforStr ? JSON.parse(fileinforStr) : {};
     let name = fileinformation.name || "";
     let userName = window.location ? window.location.pathname.slice(1) : "police";
-    let askUserDidUrl = "";
     let orgDidStr;
-    let loginName = "";
-    let userDid = ""; 
+    let userDid = "";
     if (userName === "policeUser") {
       orgDidStr = localStorage.getItem('userHasDid' + name);
     } else {
       orgDidStr = localStorage.getItem('orgrHasDid' + userName);
     }
     let orgDidObj = orgDidStr ? JSON.parse(orgDidStr) : {};
-    if (userName === "police") {
-      loginName = COMMON.ORG_TO_USERNAME[userName]
-      askUserDidUrl = "consumer/dids/" + orgDidObj[loginName];
-      userDid = orgDidObj[loginName];
-    } else if (userName === "ccb") {
-      loginName = COMMON.ORG_TO_USERNAME[userName]
-      askUserDidUrl = "producer/dids/" + orgDidObj[loginName];
-      userDid = orgDidObj[loginName];
-    } else if (userName === "fintech") {
-      loginName = COMMON.ORG_TO_USERNAME[userName]
-      askUserDidUrl = "admin/dids/" + orgDidObj[loginName];
-      userDid = orgDidObj[loginName];
-    } else if (userName === "policeUser") {
-      askUserDidUrl = "consumer/dids/" + orgDidObj[name];
-      loginName = name;
-      userDid = orgDidObj[loginName];
+    if (userName === "policeUser") {
+      userDid = orgDidObj[name];
+    } else {
+      userDid = orgDidObj[this.state.userLoginName];
     }
+    let docUrl = "";
+    useSubstrate.useSubstrateApi((api) => {
+      if (!api) { return; }
+      api.query.potModule.didDoc(userDid, (resp) => {
+        docUrl = resp[0];
+        console.log(u8aToString(docUrl));
 
-    this.setState({
-      userLoginName: loginName,
-      askUserDidUrl: askUserDidUrl,
-      userDid: userDid,
-    })
+        let userType = "";
+        let organization = "";
+        let creationDate = "";
+        let httpDidUrl = COMMON.URL_TO_NAME[userName] + u8aToString(docUrl);
+        http.get(httpDidUrl).then((resp) => {
+          if (resp.data && resp.data === 1) {
+            let result = resp.data.data ? resp.data.data : {};
+            userType = result.userType || "";
+            organization = result.organization || "";
+            creationDate = result.creationDate || "";
+            this.setState({
+              loaderState: 'disabled',
+              userDid: userDid,
+              userType: userType,
+              organization: organization,
+              creationDate: creationDate,
+            })
+          } else {
+            this.setState({
+              loaderState: 'disabled',
+              userDid: userDid,
+              confirmOpen: true,
+              messageContent: resp.data.msg,
+            })
+          }
+        })
+      });
 
-  }
+    }
+    )
 
-  userClick = () => {
-    // let userLoginName = "";
-    let userType = "";
-    let organization = "";
-    let creationDate = "";
-    http.get(this.state.askUserDidUrl).then((resp) => {
-      if (resp.data && resp.data === 1) {
-        let result = resp.data.data ? resp.data.data : {};
-        // userLoginName = result.userName || "";
-        userType = result.userType || "";
-        organization = result.organization || "";
-        creationDate = result.creationDate || "";
-      }
-    })
     this.setState({
       isShowDidInfo: true,
-      // userLoginName: userLoginName,
-      userType: userType,
-      organization: organization,
-      creationDate: creationDate,
+    })
+  }
+
+
+  handleCancel = () => {
+    this.setState({
+      confirmOpen: false,
+    })
+  }
+
+
+  handleConfirm = () => {
+    this.setState({
+      confirmOpen: false,
     })
   }
 
@@ -150,7 +189,13 @@ class Home extends React.Component {
               <Content menuData={this.props.menus} user={userName} />
             </div>}
         </div>
-
+        <Loader className={this.state.loaderState} ></Loader>
+        <Confirm
+          open={this.state.confirmOpen}
+          content={this.state.messageContent}
+          onCancel={this.handleCancel}
+          onConfirm={this.handleConfirm}
+        />
       </div>
     )
   }

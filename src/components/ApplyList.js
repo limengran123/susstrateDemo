@@ -20,10 +20,10 @@ class ApplyList extends React.Component {
             confirmOpen: false,
             messageContent: '',
             tableData: [
-                { "applyOrg": "建设银行办公室", "customerNo": "297897869", "docType": "文书档案", "startDate": "2020-05-20", "endDate": "2020-06-20", "operator": "张三", "creationDate": "2020-05-21", },
-                { "applyOrg": "建设银行办公室", "customerNo": "297897869", "docType": "文书档案", "startDate": "2020-05-20", "endDate": "2020-06-20", "operator": "张三", "creationDate": "2020-05-22", },
-                { "applyOrg": "建设银行办公室", "customerNo": "297897869", "docType": "文书档案", "startDate": "2020-05-20", "endDate": "2020-06-20", "operator": "张三", "creationDate": "2020-05-23", },
-                { "applyOrg": "建设银行办公室", "customerNo": "297897869", "docType": "文书档案", "startDate": "2020-05-20", "endDate": "2020-06-20", "operator": "张三", "creationDate": "2020-05-24", },
+                // { "applyOrg": "建设银行办公室", "customerNo": "297897869", "docType": "文书档案", "startDate": "2020-05-20", "endDate": "2020-06-20", "operator": "张三", "creationDate": "2020-05-21", },
+                // { "applyOrg": "建设银行办公室", "customerNo": "297897869", "docType": "文书档案", "startDate": "2020-05-20", "endDate": "2020-06-20", "operator": "张三", "creationDate": "2020-05-22", },
+                // { "applyOrg": "建设银行办公室", "customerNo": "297897869", "docType": "文书档案", "startDate": "2020-05-20", "endDate": "2020-06-20", "operator": "张三", "creationDate": "2020-05-23", },
+                // { "applyOrg": "建设银行办公室", "customerNo": "297897869", "docType": "文书档案", "startDate": "2020-05-20", "endDate": "2020-06-20", "operator": "张三", "creationDate": "2020-05-24", },
             ],
         }
     }
@@ -32,18 +32,16 @@ class ApplyList extends React.Component {
         let userName = window.location ? window.location.pathname.slice(1) : "police";
         let authOrgDidObj = localStorage.getItem("orgrHasDid" + userName) || "";
         let authOrgDid = authOrgDidObj ? JSON.parse(authOrgDidObj)["建设银行办公室"] : "";
-        let authOrgDidMap = new Map();
-        authOrgDidMap.set("建设银行办公室", authOrgDid);
         this.props.GET_USER_DID(authOrgDid);
 
-        // http.get("producer/vcs/application/pagedlist").then((resp) => {
-        //     if (resp.data && resp.data.status === 1) {
-        //         let resultData = resp.data.data ? resp.data.data : {};
-        //         this.setState({
-        //             tableData: resultData.list || [],
-        //         })
-        //     }
-        // })
+        http.get("producer/vcs/application/pagedlist").then((resp) => {
+            if (resp.data && resp.data.status === 1) {
+                let resultData = resp.data.data ? resp.data.data : {};
+                this.setState({
+                    tableData: resultData.list || [],
+                })
+            }
+        })
 
     }
 
@@ -55,92 +53,145 @@ class ApplyList extends React.Component {
         const operateorDidStr = localStorage.getItem("userHasDid" + rowData.operator) || "";
         const operateorDid = operateorDidStr ? JSON.parse(operateorDidStr)[rowData.operator] : "";
 
+        const authOrgDidObj = localStorage.getItem("orgrHasDid" + userName) || "";
+        const authOrgDid = authOrgDidObj ? JSON.parse(authOrgDidObj)["建设银行办公室"] : "";
+
         const orgrHasPrivateKeyStr = localStorage.getItem("orgrHasPrivateKey" + userName) || "";
         const orgPrivateKey = orgrHasPrivateKeyStr ? JSON.parse(orgrHasPrivateKeyStr)[rowData.applyOrg] : "";
+
         if ($("#agreeButton" + key).html() === "同意") {
-            useSubstrate.useSubstrateApi((api) => {
-                if (!api) { return; }
-                const result = api.tx.potModule.authorize(operateorDid);
-                result.signAndSend(keyring.getPair(orgPrivateKey), ({ events = [], status }) => {
-                    if (status.isInBlock) {
-                        events.forEach(({ event: { data, method, section }, phase }) => {
-                            if (section === 'system' && method === 'ExtrinsicSuccess') {
-                                console.log(`${section}.${method}`, data.toString());
-                                $("#agreeButton" + key).html("撤销");
-                                $("#refuseButton" + key).css("display", 'none');
-                                this.setState({
-                                    confirmOpen: true,
-                                    messageContent: '操作成功',
-                                    loaderState: "disabled",
-                                })
-                            } else if (section === 'system' && method === 'ExtrinsicFailed') {
-                                console.log(`${section}.${method}`, data.toString());
-                                const [error, info] = data;
-                                if (error.isModule) {
-                                    const decoded = api.registry.findMetaError(error.asModule);
-                                    const { documentation, name, section } = decoded;
-                                    console.log(section + " " + name);
-                                    this.setState({
-                                        confirmOpen: true,
-                                        messageContent: '操作失败，失败原因：' + name,
-                                        loaderState: "disabled",
-                                    })
-                                }
+            let params = {
+                id: rowData.id,
+                approvalStatus: 1,
+            }
+            http.post("producer/vcs/approval", params).then((resp) => {
+                if (resp.data && resp.data.status === 1) {
+                    useSubstrate.useSubstrateApi((api) => {
+                        if (!api) { return; }
+                        const result = api.tx.potModule.authorize(operateorDid, authOrgDid);
+                        result.signAndSend(keyring.getPair(orgPrivateKey), ({ events = [], status }) => {
+                            if (status.isInBlock) {
+                                events.forEach(({ event: { data, method, section }, phase }) => {
+                                    if (section === 'system' && method === 'ExtrinsicSuccess') {
+                                        console.log(`${section}.${method}`, data.toString());
+                                        $("#agreeButton" + key).html("撤销");
+                                        $("#refuseButton" + key).css("display", 'none');
+                                        this.setState({
+                                            confirmOpen: true,
+                                            messageContent: '操作成功',
+                                            loaderState: "disabled",
+                                        })
+                                    } else if (section === 'system' && method === 'ExtrinsicFailed') {
+                                        console.log(`${section}.${method}`, data.toString());
+                                        const [error, info] = data;
+                                        if (error.isModule) {
+                                            const decoded = api.registry.findMetaError(error.asModule);
+                                            const { documentation, name, section } = decoded;
+                                            console.log(section + " " + name);
+                                            this.setState({
+                                                confirmOpen: true,
+                                                messageContent: '操作失败，失败原因：' + name,
+                                                loaderState: "disabled",
+                                            })
+                                        }
 
+                                    }
+                                })
                             }
                         })
-                    }
-                })
+                    })
+                } else {
+                    this.setState({
+                        confirmOpen: true,
+                        messageContent: '操作失败，失败原因：' + resp.data.msg,
+                        loaderState: "disabled",
+                    })
+                }
+
             })
+
         } else {
-            useSubstrate.useSubstrateApi((api) => {
-                if (!api) { return; }
-                const result = api.tx.potModule.revoke(operateorDid);
-                result.signAndSend(keyring.getPair(orgPrivateKey), ({ events = [], status }) => {
-                    if (status.isInBlock) {
-                        events.forEach(({ event: { data, method, section }, phase }) => {
-                            if (section === 'system' && method === 'ExtrinsicSuccess') {
-                                console.log(`${section}.${method}`, data.toString());
-                                let tableData = this.state.tableData;
-                                tableData.splice(key, 1);
-                                this.setState({
-                                    confirmOpen: true,
-                                    messageContent: '操作成功',
-                                    tableData: tableData,
-                                    loaderState: "disabled",
+            let params = {
+                id: rowData.id,
+                approvalStatus: 3,
+            }
+            http.post("producer/vcs/approval", params).then((resp) => {
+                if (resp.data && resp.data.status === 1) {
+                    useSubstrate.useSubstrateApi((api) => {
+                        if (!api) { return; }
+                        const result = api.tx.potModule.revoke(operateorDid, authOrgDid);
+                        result.signAndSend(keyring.getPair(orgPrivateKey), ({ events = [], status }) => {
+                            if (status.isInBlock) {
+                                events.forEach(({ event: { data, method, section }, phase }) => {
+                                    if (section === 'system' && method === 'ExtrinsicSuccess') {
+                                        console.log(`${section}.${method}`, data.toString());
+                                        let tableData = this.state.tableData;
+                                        tableData.splice(key, 1);
+                                        this.setState({
+                                            confirmOpen: true,
+                                            messageContent: '操作成功',
+                                            tableData: tableData,
+                                            loaderState: "disabled",
+                                        })
+                                        $("#agreeButton" + key).html("同意");
+                                        $("#refuseButton" + key).css("display", 'inline-block');
+                                    } else if (section === 'system' && method === 'ExtrinsicFailed') {
+                                        console.log(`${section}.${method}`, data.toString());
+                                        const [error, info] = data;
+                                        if (error.isModule) {
+                                            const decoded = api.registry.findMetaError(error.asModule);
+                                            const { documentation, name, section } = decoded;
+                                            console.log(section + " " + name);
+                                            this.setState({
+                                                confirmOpen: true,
+                                                messageContent: '操作失败，失败原因：' + name,
+                                                loaderState: "disabled",
+                                            })
+                                        }
+                                    }
+
                                 })
-                                $("#agreeButton" + key).html("同意");
-                                $("#refuseButton" + key).css("display", 'inline-block');
-                            } else if (section === 'system' && method === 'ExtrinsicFailed') {
-                                console.log(`${section}.${method}`, data.toString());
-                                const [error, info] = data;
-                                if (error.isModule) {
-                                    const decoded = api.registry.findMetaError(error.asModule);
-                                    const { documentation, name, section } = decoded;
-                                    console.log(section + " " + name);
-                                    this.setState({
-                                        confirmOpen: true,
-                                        messageContent: '操作失败，失败原因：' + name,
-                                        loaderState: "disabled",
-                                    })
-                                }
+
                             }
-
                         })
-
-                    }
-                })
+                    })
+                } else {
+                    this.setState({
+                        confirmOpen: true,
+                        messageContent: '操作失败，失败原因：' + resp.data.msg,
+                        loaderState: "disabled",
+                    })
+                }
             })
+
         }
 
     }
 
     handleRefuseClick = (key, item, e) => {
-        let tableData = this.state.tableData;
-        tableData.splice(key, 1);
         this.setState({
-            tableData: tableData
+            loaderState: "active",
         })
+        let params = {
+            id: item.id,
+            approvalStatus: 2,
+        }
+        http.post("producer/vcs/approval", params).then((resp) => {
+            if (resp.data && resp.data.status === 1) {
+                let tableData = this.state.tableData;
+                tableData.splice(key, 1);
+                this.setState({
+                    tableData: tableData
+                })
+            } else {
+                this.setState({
+                    confirmOpen: true,
+                    messageContent: '操作失败，失败原因：' + resp.data.msg,
+                    loaderState: "disabled",
+                })
+            }
+        })
+
     }
 
     getDateStr = (value) => {

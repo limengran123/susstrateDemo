@@ -10,3 +10,10 @@ export const menuItemObj = {
     "fintech": ["调阅审批", "档案上传"],
     "policeUser": ["申请调用", "调用结果", "授权书管理"],
   }
+
+export const URL_TO_NAME = {
+    "police": "consumer/dids/",
+    "ccb": "producer/dids/",
+    "fintech": "admin/dids/",
+    "policeUser": "consumer/dids/",
+}

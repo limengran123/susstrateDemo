@@ -4,9 +4,7 @@ import { Select, Form, Confirm, Loader } from 'semantic-ui-react';
 import { getMenuDataAction } from '@/actions/menuAction';
 import { getUserDidInfoAction } from '@/actions/didInfoAction';
 import { connect } from 'react-redux';
-import http from '../service/httpRequest.js';
 import useSubstrate from '../service/userSubstrateRequest.js';
-import * as COMMON from '../tools/CommonConstant';
 
 const testKeyring = require('@polkadot/keyring/testing');
 const keyring = testKeyring.default();
@@ -64,6 +62,7 @@ class ApplyAuthorization extends React.Component {
         const orgDid = orgDidStr ? JSON.parse(orgDidStr)["建设银行办公室"] : "";
         // 建设银行办公室DID先获取再写死
         authOrgDidMap.set("建设银行办公室", orgDid);
+        authOrgDidMap.set("建设银行办公室", "did:ccbft:AZS34F2HSuSiPvjx2DjvU8FYYP");
 
 
         this.setState({
@@ -134,20 +133,25 @@ class ApplyAuthorization extends React.Component {
 
     handleSubmit = () => {
         let userName = window.location ? window.location.pathname.slice(1) : "police";
-        // if (this.state.emailErrorMessage.length > 0 || this.state.numMessage.length > 0) {
-        //     return;
-        // }
-        // if (!this.state.workAutho || !this.state.num || !this.state.dataType || !this.state.startDate || !this.state.endDate || !this.state.user || !this.state.range || !this.state.email) {
-        //     this.setState({
-        //         confirmOpen: true,
-        //         messageContent: '每项都为必填项，请检查是否填写完整',
-        //     })
-        //     return;
-        // }
+        if (this.state.emailErrorMessage.length > 0 || this.state.numMessage.length > 0) {
+            return;
+        }
+        let workAuthoReg = this.state.workAutho > 0 || !this.state.workAutho && this.state.workAutho === 0;
+        let dataType = this.state.dataType > 0 || !this.state.dataType && this.state.dataType === 0;
+        let user = this.state.user > 0 || !this.state.user && this.state.user === 0;
+        let range = this.state.range > 0 || !this.state.range && this.state.range === 0;
+        if (!workAuthoReg || !this.state.num || !dataType || !this.state.startDate || !this.state.endDate || !user || !range || !this.state.email) {
+            this.setState({
+                confirmOpen: true,
+                messageContent: '每项都为必填项，请检查是否填写完整',
+            })
+            return;
+        }
 
         this.setState({ loaderState: "active" })
 
         let authOrgName = this.state.workAutho || this.state.workAutho === 0 ? this.state.authOrgOptions[this.state.workAutho].text : "";
+        let authDid = this.state.authOrgDidMap.get(authOrgName);
         let operateorName = this.state.user || this.state.user === 0 ? this.state.userOptions[this.state.user].text : "";
 
         const orgDidStr = localStorage.getItem("orgrHasDid" + userName) || "";
@@ -156,18 +160,15 @@ class ApplyAuthorization extends React.Component {
         const operateorDidStr = localStorage.getItem("userHasDid" + operateorName) || "";
         const operateorDid = operateorDidStr ? JSON.parse(operateorDidStr)[operateorName] : "";
         let param = {
-            //     "authOrg": authOrgName, //授权机构（档案生产方）
-            //     "docType": this.state.dataType || this.state.dataType === 0 ? dataTypeOptions[this.state.dataType].text : "", //文档类型
-
-            "authOrg": "建设银行办公室", //授权机构（档案生产方）
+            "authOrg": authOrgName, //授权机构（档案生产方）
             "applyOrg": "公安部", //申请机构（档案使用方）
             "customerNo": this.state.num, //客户编号
-            "docType": "文书档案", //文档类型
+            "docType": this.state.dataType || this.state.dataType === 0 ? dataTypeOptions[this.state.dataType].text : "", //文档类型
             "startDate": this.state.startDate, //调用开始日期
             "endDate": this.state.endDate, //调用结束日期
             "operator": operateorName, //调阅人员
             "receiveMail": this.state.email,
-            "authOrgDid": this.state.authOrgDidMap.get(authOrgName), //授权机构Did需要写死在系统中
+            "authOrgDid": authDid, //授权机构Did需要写死在系统中
             "applyOrgDid": orgDid, //使用机构DID
             "operatorDid": operateorDid, //调阅人员DID
         }
@@ -179,7 +180,7 @@ class ApplyAuthorization extends React.Component {
 
         useSubstrate.useSubstrateApi((api) => {
             if (!api) { return; }
-            const result = api.tx.potModule.apply(operateorDid, paramStr);
+            const result = api.tx.potModule.apply(operateorDid, authDid, paramStr);
             result.signAndSend(keyring.getPair(publicKey), ({ events = [], status }) => {
                 if (status.isInBlock) {
                     events.forEach(({ event: { data, method, section }, phase }) => {
