@@ -6,12 +6,11 @@ import http from '../service/httpRequest.js';
 import useSubstrate from '../service/userSubstrateRequest.js';
 import * as COMMON from '../tools/CommonConstant';
 import { getMenuDataAction } from '@/actions/menuAction';
-import { u8aToHex, u8aToString } from '@polkadot/util';
-import { decodeAddress } from '@polkadot/util-crypto';
+import { u8aToHex } from '@polkadot/util';
 
+const stringToU8a = require('@polkadot/util/string/toU8a').default;
 const testKeyring = require('@polkadot/keyring/testing');
 const keyring = testKeyring.default();
-
 
 
 class DidApply extends React.Component {
@@ -29,7 +28,7 @@ class DidApply extends React.Component {
 
     handleUserChange = (node, value) => {
         this.setState({
-            applyUser: value.value,
+            applyUser: value.value.trim(),
         })
     }
 
@@ -42,38 +41,38 @@ class DidApply extends React.Component {
         let url = "";
         let userType = "";
         let organization = "";
-
+        let newOperatorArr = [];
         // 生成人员Did
         if (this.props.isUser) {
-            // 前端生成公私钥对，传给后端，返回DID
-            accountId1 = "5HGjWAeFDfFCWPsjFQdVV2Msvz2XtMktvgocEZcCj68kUMaw"; //EVE
-            accountId2 = "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty"; //BOB
+            let operatorArr = JSON.parse(localStorage.getItem("operatorArr"));
+            if (!operatorArr) {
+                newOperatorArr.push(authUserNmae);
+            } else {
+                if (operatorArr.includes(authUserNmae)) {
+                    this.props.GET_MENU_DATA("申请授权");
+                    return;
+                } else {
+                    newOperatorArr = operatorArr;
+                    newOperatorArr.push(authUserNmae)
+                }
+            }
+
+            // 创建钥对并将Alice添加到keyring pair字典中（带有帐户种子）
+            // const seed = (Math.random().toString(36).substr(2)).padEnd(32, ' ');
+            const seed = escape(authUserNmae).split('%').join('').padEnd(32, ' ');
+            const result = keyring.addFromSeed(stringToU8a(seed));
+            accountId1 = result.address;
             url = "consumer/dids/register";
             userType = "调阅人员";
-            organization = "张三";
+            organization = authUserNmae;
         } else {
-            if (userName === "police") {
-                accountId1 = "5GrwvaEF5zXb26Fz9rcQpDWS57CtERHpNehXCPcNoHGKutQY"; //ALICE
-                accountId2 = "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty"; //BOB
-                url = "consumer/dids/register";
-                userType = "档案使用方";
-                organization = "公安部";
-            } else if (userName === "ccb") {
-                accountId1 = "5FLSigC9HGRKVhB9FiEo4Y3koPsNmBmLJbpXg2mp1hXcS59Y"; //CHARLIE
-                accountId2 = "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty"; //BOB
-                url = "producer/dids/register";
-                userType = "档案生产方";
-                organization = "建设银行办公室";
-            } else if (userName === "fintech") {
-                accountId1 = "5DAAnrj7VHTznn2AWBemMuyBwZWs6FNFjdyVXUeYum3PTXFy"; //DAVE
-                accountId2 = "5FHneW46xGXgs5mUiveU4sbTyGBzmstUspZC92UhjJM694ty"; //BOB 
-                url = "admin/dids/register";
-                userType = "档案运营方";
-                organization = "建信金科";
-            }
+            accountId1 = COMMON.ACCOUNT_TO_USER[userName];
+            url = COMMON.URL_TO_NAME[userName] + "register";
+            userType = COMMON.USER_TYPE[userName];
+            organization = COMMON.ORG_TO_USERNAME[userName];
         }
 
-
+        accountId2 = COMMON.ACCOUNT_SECONDARY;
         let params = {
             "mainKeyPair": {
                 "publicKey": u8aToHex(keyring.getPair(accountId1).publicKey) || ""
@@ -85,25 +84,6 @@ class DidApply extends React.Component {
             "organization": organization,
         }
 
-        if (userName === "ccb") {
-            params = {
-                "mainKeyPair": {
-                    "publicKey": u8aToHex(keyring.getPair(accountId1).publicKey) || ""
-                },
-                "secondKeyPair": {
-                    "publicKey": u8aToHex(keyring.getPair(accountId2).publicKey) || ""
-                },
-                "userType": userType,
-                "organization": organization,
-            }
-        }
-      
-        const hexPair = keyring.addFromUri(u8aToHex(keyring.getPair(accountId1).publicKey));
-        console.log(hexPair);
-        console.log(keyring.getPairs());
-
-
-
         http.post(url, params).then((resp) => {
             if (resp.data && resp.data.status === 1) {
                 let docUrl = resp.data.data.docUrl || "";
@@ -111,22 +91,6 @@ class DidApply extends React.Component {
                 let did = resp.data.data.didId || "";
 
                 if (this.props.isUser) {
-                    // 将所有申请人员存起来
-                    let operatorArr = JSON.parse(localStorage.getItem("operatorArr"));
-                    let newOperatorArr = [];
-                    if (!operatorArr) {
-                        newOperatorArr.push(authUserNmae);
-                    } else {
-                        if (operatorArr.includes(authUserNmae)) {
-                            this.props.GET_MENU_DATA("申请授权");
-                            return;
-                        } else {
-                            newOperatorArr = operatorArr;
-                            newOperatorArr.push(authUserNmae)
-                        }
-                    }
-                    localStorage.setItem("operatorArr", JSON.stringify(newOperatorArr));
-
                     // 将已申请过DId的用户保存起来传给使用方供使用方选择
                     let userDidObj = {
                         [authUserNmae]: did
@@ -145,22 +109,17 @@ class DidApply extends React.Component {
                     localStorage.setItem('orgrHasPrivateKey' + userName, JSON.stringify(privateKeyObj));
                 }
 
-                // 根据公钥获取私钥
-                // let privateKeyStr =  keyring.getPair(accountId1)
-                // console.log(JSON.stringify(privateKeyStr));
-
                 // 调用区块链
                 useSubstrate.useSubstrateApi((api) => {
                     if (!api) { return; }
                     const { nonce } = api.query.system.account(accountId1);
                     const operatePair = keyring.getPair(accountId1);
                     const result = api.tx.potModule.register(did, docUrl, docHash);
-                    console.log(result);
                     result.signAndSend(operatePair, { nonce }, ({ events = [], status }) => {
                         if (status.isInBlock) {
                             events.forEach(({ event: { data, method, section }, phase }) => {
-                                console.log(`${section}.${method}`, data.toString());
                                 if (section === 'system' && method === 'ExtrinsicSuccess') {
+                                    localStorage.setItem("operatorArr", JSON.stringify(newOperatorArr));
                                     this.setState({
                                         loaderState: "disabled",
                                         confirmOpen: true,
@@ -168,12 +127,16 @@ class DidApply extends React.Component {
                                         registerSuccess: true,
                                     })
                                 } else if (section === 'system' && method === 'ExtrinsicFailed') {
-                                    console.log(`${section}.${method}`, data.toString());
-                                    this.setState({
-                                        loaderState: "disabled",
-                                        confirmOpen: true,
-                                        messageContent: "生成失败",
-                                    })
+                                    const [error, info] = data;
+                                    if (error.isModule) {
+                                        const decoded = api.registry.findMetaError(error.asModule);
+                                        const { documentation, name, section } = decoded;
+                                        this.setState({
+                                            loaderState: "disabled",
+                                            confirmOpen: true,
+                                            messageContent: "生成失败,失败原因：" + name,
+                                        })
+                                    }
                                 }
 
                             })

@@ -5,9 +5,13 @@ import axios from 'axios';
 // 新创建一个axios实例，并进行基础配置
 var instance = axios.create({
     baseURL: "/",
-    //baseURL: "http://128.96.200.41:8081/",
-    timeout: 6000,
-    // headers: {'X-Requested-With': 'XMLHttpRequest'}
+    // baseURL: "http://11.63.179.9:8081/",
+    // baseURL: "http://192.168.43.50:8083/",
+    timeout: 100000,
+    headers: {
+        // 'X-Requested-With': 'XMLHttpRequest',
+        // "Content-Type": "multipart/form-data",
+    },
 });
 
 // 添加请求拦截器
@@ -64,7 +68,6 @@ var post = function (url, data) {
         instance
             .post(url, data)
             .then(res => {
-                console.log(res);
                 resolve(res);
             })
             .catch(err => {

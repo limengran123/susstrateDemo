@@ -48,8 +48,8 @@ class ApplyResult extends React.Component {
                             }
                             {this.state.isShowMoreInfo ?
                                     <Table.Cell >
-                                        <div className="operation" >查看</div>
-                                        <div className="operation" >下载</div>
+                                        <div className="operation" > <a href="https://www.jianshu.com/p/2f39de746900">查看 </a></div>
+                                        <div className="operation" > <a href="https://www.jianshu.com/p/2f39de746900">下载 </a></div>
                                     </Table.Cell>
                                     : <Table.Cell className="operation" onClick={this.handleMoreClick} >查看详情</Table.Cell>
                                 }

@@ -1,21 +1,26 @@
 import React from 'react';
 import './common.css';
-import { Form, Confirm, Button, Select } from 'semantic-ui-react';
+import { Form, Confirm, Button, Select, Loader } from 'semantic-ui-react';
 import { connect } from 'react-redux';
 import $ from 'jquery';
+import http from '../service/httpRequest';
+import * as COMMON from '../tools/CommonConstant';
+import useSubstrate from '../service/userSubstrateRequest.js';
 
+const testKeyring = require('@polkadot/keyring/testing');
+const keyring = testKeyring.default();
 
 class DocUpload extends React.Component {
     constructor(props) {
         super(props);
         this.state = {
-            num: "",
-            numMessage: "",
-            date: "",
+            loaderState: "disabled",
             confirmOpen: false,
+            confirmContent: "",
             producerOptions: [{ key: 0, value: 0, text: "建设银行办公室" }],
             producer: "",
             docNameArr: [],
+            fileList: [],
             num: "",
             numMessage: "",
             docTypeOption: [{ key: 0, value: 0, text: "文书档案" }],
@@ -101,13 +106,16 @@ class DocUpload extends React.Component {
 
     fileChange = (e) => {
         let docNameArr = this.state.docNameArr;
+        let fileList = this.state.fileList;
         let files = e.target.files; // 获取上传的文件集合
         if (files) {
             let file = files[0];
             let name = file.name
             docNameArr.push(name);
+            fileList.push(file);
             this.setState({
-                docNameArr: docNameArr
+                docNameArr: docNameArr,
+                fileList: fileList,
             });
         }
 
@@ -116,16 +124,102 @@ class DocUpload extends React.Component {
     deleteDoc = (index) => {
         document.getElementById("addFile").value = "";
         let docNameArr = this.state.docNameArr;
+        let fileList = this.state.fileList;
         docNameArr.splice(index, 1);
+        fileList.splice(index, 1);
         this.setState({
-            docNameArr: docNameArr
+            docNameArr: docNameArr,
+            fileList: fileList,
         });
 
     }
+
+    submitClick = () => {
+        this.setState({ loaderState: "active" })
+        let range = this.state.range > 0 || (!this.state.range && this.state.range === 0);
+        let producer = this.state.producer > 0 || (!this.state.producer && this.state.producer === 0);
+        let docType = this.state.docType > 0 || (!this.state.docType && this.state.docType === 0);
+        if (!this.state.num || !this.state.date || !range || !producer || !docType) {
+            this.setState({
+                loaderState: "disabled",
+                confirmOpen: true,
+                confirmContent: "每项都为必填项，请检查是否填写完整",
+            })
+            return;
+        }
+        let paramsData = new FormData();
+        paramsData.append("callOrgRange", this.state.rangeOptions[this.state.range].text);
+        paramsData.append("producerName", this.state.producerOptions[this.state.producer].text);
+        paramsData.append("customerNo", this.state.num);
+        paramsData.append("docType", this.state.docTypeOption[this.state.docType].text);
+        paramsData.append("docCreationDate", this.state.date);
+        let fileList = this.state.fileList;
+        for (var i = 0; i < fileList.length; i++) {
+            paramsData.append("files", fileList[i]);
+        }
+        let headers = { headers: { "Content-Type": "multipart/form-data" } }
+        http.post("admin/docs/uploader", paramsData, headers).then((resp) => {
+            if (resp.data && resp.data.status === 1) {
+                let fileList = resp.data.data ? resp.data.data.fileList : [];
+                this.setArchiveData(fileList);
+            } else {
+                this.setState({
+                    loaderState: "disabled",
+                    confirmOpen: true,
+                    confirmContent: "上传失败，失败原因：" + resp.data.msg,
+                })
+            }
+        })
+    }
+
+    setArchiveData = (fileList) => {
+        let windowName = window.location ? window.location.pathname.slice(1) : "police";
+        let account = COMMON.ACCOUNT_TO_USER[windowName];
+        return new Promise(function (resolve, reject) {
+            useSubstrate.useSubstrateApi((api) => {
+                (async function () {
+                    if (!api) { return; }
+                    let { nonce } = await api.query.system.account(account);
+                    for (var i = 0; i < fileList.length; i++) {
+                        const filName = fileList[i].fileName;
+                        const resp = api.tx.potModule.setArchive(fileList[i].id, fileList[i].fileHash, fileList[i].ipfsUrl);
+                        resp.signAndSend(keyring.getPair(account), { nonce }, ({ events = [], status }) => {
+                            if (status.isInBlock) {
+                                events.forEach(({ event: { data, method, section }, phase }) => {
+                                    if (section === 'system' && method === 'ExtrinsicSuccess') {
+                                        // resolve([true, filName]);
+                                        resolve(this.setState({
+                                            loaderState: "disabled",
+                                            confirmOpen: true,
+                                            confirmContent: filName + "上传成功",
+                                        }));
+                                    } else if (section === 'system' && method === 'ExtrinsicFailed') {
+                                        const [error, info] = data;
+                                        if (error.isModule) {
+                                            const decoded = api.registry.findMetaError(error.asModule);
+                                            const { documentation, name, section } = decoded;
+                                            resolve(this.setState({
+                                                loaderState: "disabled",
+                                                confirmOpen: true,
+                                                confirmContent: filName + "上传失败，失败原因：" + name,
+                                            }));
+                                        }
+
+                                    }
+                                });
+                            }
+                        }).catch(console.error);
+                        nonce = parseInt(nonce) + 1;
+                    }
+                })();
+            })
+        })
+    }
+
     render() {
         const docNameArr = this.state.docNameArr;
         return (
-            <div className="applyDiv">
+            <div className="applyDiv" >
                 <div>
                     <div id="uploadDocForm">
                         <div className="authorization">
@@ -161,7 +255,7 @@ class DocUpload extends React.Component {
                             })}
                         </div>
                         <div className="addButton" onClick={this.addDoc}>
-                            <input type="file" id="addFile" style={{ 'display': 'none' }} onChange={this.fileChange} />
+                            <input type="file" id="addFile" style={{ 'display': 'none' }} onChange={this.fileChange} multiple="multiple" />
                             增加档案
                         </div>
                     </div>
@@ -170,9 +264,10 @@ class DocUpload extends React.Component {
                         <Button primary onClick={this.submitClick} className="submitButton">上传</Button>
                     </div>
                 </div>
+                <Loader className={this.state.loaderState} ></Loader>
                 <Confirm
                     open={this.state.confirmOpen}
-                    content='申请成功'
+                    content={this.state.confirmContent}
                     onCancel={this.handleCancel}
                     onConfirm={this.handleConfirm}
                 />

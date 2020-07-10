@@ -17,7 +17,7 @@ class UserLogin extends React.Component {
         super(props);
         this.state = {
             isCancelShow: false,
-            fileinformation: {},
+            fileString: "",
             credentialSubject: {},
             fileName: "",
         }
@@ -27,16 +27,12 @@ class UserLogin extends React.Component {
     componentDidMount() {
         let fileName = localStorage.getItem('fileName');
         if (fileName) {
-            let fileinformationStr = localStorage.getItem('fileinformation');
-            let fileinformation = fileinformationStr ? JSON.parse(fileinformationStr) : {};
             let credentialSubjectStr = localStorage.getItem('credentialSubject');
             let credentialSubject = credentialSubjectStr ? JSON.parse(credentialSubjectStr) : {};
-
             $("#xFile").css('display', 'none');
             this.setState({
                 fileName: fileName,
                 isCancelShow: true,
-                fileinformation: fileinformation,
                 credentialSubject: credentialSubject,
             })
         } else {
@@ -62,23 +58,21 @@ class UserLogin extends React.Component {
         reader.onload = (evt) => { //读取完文件之后会回来这里
             let fileString = evt.target.result; // 读取文件内容
             let fileData = fileString ? JSON.parse(fileString) : {};
-            let fileinformation = fileData.fileinformation ? fileData.fileinformation : {};
-            let credentialSubject = fileData.credentialSubject ? fileData.credentialSubject : {};
+            let credentialSubject = fileData.claims ? fileData.claims[0].credentialSubject[0] : {};
             this.setState({
-                fileinformation: fileinformation,
+                fileString: fileString,
                 credentialSubject: credentialSubject,
-                fileName: file.name,
+                fileName: credentialSubject.longDescription,
             })
         }
 
     }
 
     submitClick = () => {
-        let fileinformation = this.state.fileinformation;
         let credentialSubject = this.state.credentialSubject;
-        localStorage.setItem('fileinformation', JSON.stringify(fileinformation));
         localStorage.setItem('credentialSubject', JSON.stringify(credentialSubject));
         localStorage.setItem('fileName', this.state.fileName);
+        localStorage.setItem('fileString', this.state.fileString);
         window.location.pathname = "/policeUser";
     }
 

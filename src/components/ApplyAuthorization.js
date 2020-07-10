@@ -136,7 +136,7 @@ class ApplyAuthorization extends React.Component {
         if (this.state.emailErrorMessage.length > 0 || this.state.numMessage.length > 0) {
             return;
         }
-        let workAuthoReg = this.state.workAutho > 0 || !this.state.workAutho && this.state.workAutho === 0;
+        let workAuthoReg = this.state.workAutho > 0 || (!this.state.workAutho && this.state.workAutho === 0);
         let dataType = this.state.dataType > 0 || !this.state.dataType && this.state.dataType === 0;
         let user = this.state.user > 0 || !this.state.user && this.state.user === 0;
         let range = this.state.range > 0 || !this.state.range && this.state.range === 0;
@@ -167,6 +167,7 @@ class ApplyAuthorization extends React.Component {
             "startDate": this.state.startDate, //调用开始日期
             "endDate": this.state.endDate, //调用结束日期
             "operator": operateorName, //调阅人员
+            "callOrgRange": this.state.range || this.state.range === 0 ? rangeOptions[this.state.range].text : "",
             "receiveMail": this.state.email,
             "authOrgDid": authDid, //授权机构Did需要写死在系统中
             "applyOrgDid": orgDid, //使用机构DID
@@ -185,7 +186,6 @@ class ApplyAuthorization extends React.Component {
                 if (status.isInBlock) {
                     events.forEach(({ event: { data, method, section }, phase }) => {
                         if (section === 'system' && method === 'ExtrinsicSuccess') {
-                            console.log(`${section}.${method}`, data.toString());
                             this.setState({
                                 workAutho: '',
                                 num: '',
@@ -200,7 +200,6 @@ class ApplyAuthorization extends React.Component {
                                 loaderState: "disabled",
                             })
                         } else if (section === 'system' && method === 'ExtrinsicFailed') {
-                            console.log(`${section}.${method}`, data.toString());
                             const [error, info] = data;
                             if (error.isModule) {
                                 const decoded = api.registry.findMetaError(error.asModule);

@@ -28,25 +28,21 @@ class LeftMenu extends React.Component {
 
   componentDidMount() {
     let orgDidStr;
+    let orgDidObj;
+    let did;
     let userName = window.location ? window.location.pathname.slice(1) : "police";
     if (this.state.user === "policeUser") {
-      let fileinforStr = localStorage.getItem('fileinformation');
-      let fileinformation = fileinforStr ? JSON.parse(fileinforStr) : {};
-      let name = fileinformation.name || "";
+      let credentialSubjectStr = localStorage.getItem('credentialSubject');
+      let credentialSubject = credentialSubjectStr ? JSON.parse(credentialSubjectStr) : {};
+      let fileInformation = credentialSubject.fileInformation || {};
+      let name = fileInformation.name || "";
       orgDidStr = localStorage.getItem('userHasDid' + name);
-    } else {
-      orgDidStr = localStorage.getItem('orgrHasDid' + userName);
-    }
-    let orgDidObj = orgDidStr ? JSON.parse(orgDidStr) : {};
-    let did;
-    if (this.state.user === "policeUser") {
-      let fileinforStr = localStorage.getItem('fileinformation');
-      let fileinformation = fileinforStr ? JSON.parse(fileinforStr) : {};
-      let name = fileinformation.name || "";
+      orgDidObj = orgDidStr ? JSON.parse(orgDidStr) : {};
       did = orgDidObj[name];
     } else {
-      let userName = COMMON.ORG_TO_USERNAME[this.state.user];
-      did = orgDidObj[userName];
+      orgDidStr = localStorage.getItem('orgrHasDid' + userName);
+      orgDidObj = orgDidStr ? JSON.parse(orgDidStr) : {};
+      did = orgDidObj[COMMON.ORG_TO_USERNAME[userName]];
     }
 
 
@@ -57,19 +53,19 @@ class LeftMenu extends React.Component {
         });
         this.props.GET_MENU_DATA("调用人员DID生成");
       }
-      if (!did) {
-        menuItemObj = {
-          "police": ["DID生成", "调用人员DID生成"],
-          "ccb": ["DID生成"],
-          "fintech": ["DID生成"],
-          "policeUser": ["申请调用", "调用结果", "授权书管理"],
-        };
+      // if (!did) {
+      //   menuItemObj = {
+      //     "police": ["DID生成", "调用人员DID生成"],
+      //     "ccb": ["DID生成"],
+      //     "fintech": ["DID生成"],
+      //     "policeUser": ["申请调用", "调用结果", "授权书管理"],
+      //   };
 
-        this.setState({
-          activeItem: menuItemObj[this.state.user][0],
-        });
-        this.props.GET_MENU_DATA(menuItemObj[this.state.user][0]);
-      } else {
+      //   this.setState({
+      //     activeItem: menuItemObj[this.state.user][0],
+      //   });
+      //   this.props.GET_MENU_DATA(menuItemObj[this.state.user][0]);
+      // } else {
         if (this.state.user === "police") {
           this.setState({
             activeItem: "调用人员DID生成",
@@ -83,7 +79,7 @@ class LeftMenu extends React.Component {
           });
           this.props.GET_MENU_DATA(menuItemObj[this.state.user][0]);
         }
-      }
+      // }
 
     }
     if (this.state.user === "policeUser") {

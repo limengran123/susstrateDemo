@@ -1,25 +1,6 @@
 import React from 'react';
 import './common.css';
 import { connect } from 'react-redux';
-import http from '../service/httpRequest.js';
-
-const Keyring = require('@polkadot/keyring').default;
-const stringToU8a = require('@polkadot/util/string/toU8a').default;
-const ALICE_SEED = 'zhangsan'.padEnd(32, ' ');
-const keyring = new Keyring();
-
-// 创建钥对并将Alice添加到keyring pair字典中（带有帐户种子）
-const pairAlice = keyring.addFromSeed(stringToU8a(ALICE_SEED));
-const aa = keyring.getPair(pairAlice.address);
-const bb = (keyring.getPair(pairAlice.address));
-const publicKey = keyring.decodeAddress(pairAlice.address); //公钥
-
-console.log(pairAlice);
-console.log(aa);
-console.log(bb);
-console.log(publicKey);
-
-
 
 class ManageCard extends React.Component {
     constructor(props) {
@@ -34,15 +15,16 @@ class ManageCard extends React.Component {
     }
 
     componentDidMount() {
-        let fileinforStr = localStorage.getItem('fileinformation');
-        let fileinformation = fileinforStr ? JSON.parse(fileinforStr) : {};
-        let number = fileinformation.number || "";
-        let filetype = fileinformation.filetype || "";
-        let initiator = fileinformation.initiator || "";
-        let validdate = fileinformation.validdate || "";
+        let credentialSubjectStr = localStorage.getItem('credentialSubject');
+        let credentialSubject = credentialSubjectStr ? JSON.parse(credentialSubjectStr) : {};
+        let fileInformation = credentialSubject.fileInformation || {};
+        let number = fileInformation.number || "";
+        let filetype = fileInformation.fileType || "";
+        let initiator = fileInformation.validAgency || "";
+        let validdate = fileInformation.validDate;
         let startDate = "";
         let endDate = "";
-        if (validdate.indexOf("~") > -1) {
+        if (validdate && validdate.indexOf("~") > -1) {
             startDate = validdate.split("~")[0];
             endDate = validdate.split("~")[1];
         }

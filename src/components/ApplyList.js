@@ -20,25 +20,24 @@ class ApplyList extends React.Component {
             confirmOpen: false,
             messageContent: '',
             tableData: [
-                // { "applyOrg": "建设银行办公室", "customerNo": "297897869", "docType": "文书档案", "startDate": "2020-05-20", "endDate": "2020-06-20", "operator": "张三", "creationDate": "2020-05-21", },
-                // { "applyOrg": "建设银行办公室", "customerNo": "297897869", "docType": "文书档案", "startDate": "2020-05-20", "endDate": "2020-06-20", "operator": "张三", "creationDate": "2020-05-22", },
-                // { "applyOrg": "建设银行办公室", "customerNo": "297897869", "docType": "文书档案", "startDate": "2020-05-20", "endDate": "2020-06-20", "operator": "张三", "creationDate": "2020-05-23", },
-                // { "applyOrg": "建设银行办公室", "customerNo": "297897869", "docType": "文书档案", "startDate": "2020-05-20", "endDate": "2020-06-20", "operator": "张三", "creationDate": "2020-05-24", },
+                // {"authOrg": "建设银行办公室","customerNo": "20200708","docType": "文书档案","startDate": "16587800000","endDate": "156090340000","operator": "张三","creationDate": "1593705600000","approveStatus": "0","receiveMail": "limengran0911@163.com"}
             ],
         }
     }
 
     componentDidMount() {
-        let userName = window.location ? window.location.pathname.slice(1) : "police";
-        let authOrgDidObj = localStorage.getItem("orgrHasDid" + userName) || "";
-        let authOrgDid = authOrgDidObj ? JSON.parse(authOrgDidObj)["建设银行办公室"] : "";
-        this.props.GET_USER_DID(authOrgDid);
-
         http.get("producer/vcs/application/pagedlist").then((resp) => {
             if (resp.data && resp.data.status === 1) {
                 let resultData = resp.data.data ? resp.data.data : {};
+                let tableData = resultData.list;
+                let newTableData = [];
+                for (var i = 0; i < tableData.length; i++) {
+                    if (tableData[i].approveStatus === 0 || tableData[i].approveStatus === 1 ) {
+                        newTableData.push(tableData[i])
+                    }
+                }
                 this.setState({
-                    tableData: resultData.list || [],
+                    tableData: newTableData,
                 })
             }
         })
@@ -50,21 +49,15 @@ class ApplyList extends React.Component {
             loaderState: "active",
         })
         let userName = window.location ? window.location.pathname.slice(1) : "police";
-        const operateorDidStr = localStorage.getItem("userHasDid" + rowData.operator) || "";
-        const operateorDid = operateorDidStr ? JSON.parse(operateorDidStr)[rowData.operator] : "";
-
-        const authOrgDidObj = localStorage.getItem("orgrHasDid" + userName) || "";
-        const authOrgDid = authOrgDidObj ? JSON.parse(authOrgDidObj)["建设银行办公室"] : "";
-
+        const operateorDid = rowData.operatorDid || "";
+        const authOrgDid = rowData.authOrgDid || "";
         const orgrHasPrivateKeyStr = localStorage.getItem("orgrHasPrivateKey" + userName) || "";
-        const orgPrivateKey = orgrHasPrivateKeyStr ? JSON.parse(orgrHasPrivateKeyStr)[rowData.applyOrg] : "";
+        const orgPrivateKey = orgrHasPrivateKeyStr ? JSON.parse(orgrHasPrivateKeyStr)[rowData.authOrg] : "";
 
         if ($("#agreeButton" + key).html() === "同意") {
-            let params = {
-                id: rowData.id,
-                approvalStatus: 1,
-            }
-            http.post("producer/vcs/approval", params).then((resp) => {
+            let newRowData = JSON.parse(JSON.stringify(rowData));
+            newRowData.approveStatus = 1;
+            http.post("producer/vcs/approval", newRowData).then((resp) => {
                 if (resp.data && resp.data.status === 1) {
                     useSubstrate.useSubstrateApi((api) => {
                         if (!api) { return; }
@@ -73,7 +66,6 @@ class ApplyList extends React.Component {
                             if (status.isInBlock) {
                                 events.forEach(({ event: { data, method, section }, phase }) => {
                                     if (section === 'system' && method === 'ExtrinsicSuccess') {
-                                        console.log(`${section}.${method}`, data.toString());
                                         $("#agreeButton" + key).html("撤销");
                                         $("#refuseButton" + key).css("display", 'none');
                                         this.setState({
@@ -82,12 +74,10 @@ class ApplyList extends React.Component {
                                             loaderState: "disabled",
                                         })
                                     } else if (section === 'system' && method === 'ExtrinsicFailed') {
-                                        console.log(`${section}.${method}`, data.toString());
                                         const [error, info] = data;
                                         if (error.isModule) {
                                             const decoded = api.registry.findMetaError(error.asModule);
                                             const { documentation, name, section } = decoded;
-                                            console.log(section + " " + name);
                                             this.setState({
                                                 confirmOpen: true,
                                                 messageContent: '操作失败，失败原因：' + name,
@@ -111,11 +101,9 @@ class ApplyList extends React.Component {
             })
 
         } else {
-            let params = {
-                id: rowData.id,
-                approvalStatus: 3,
-            }
-            http.post("producer/vcs/approval", params).then((resp) => {
+            let newRowData = JSON.parse(JSON.stringify(rowData));
+            newRowData.approveStatus = 3;
+            http.post("producer/vcs/approval", newRowData).then((resp) => {
                 if (resp.data && resp.data.status === 1) {
                     useSubstrate.useSubstrateApi((api) => {
                         if (!api) { return; }
@@ -124,7 +112,6 @@ class ApplyList extends React.Component {
                             if (status.isInBlock) {
                                 events.forEach(({ event: { data, method, section }, phase }) => {
                                     if (section === 'system' && method === 'ExtrinsicSuccess') {
-                                        console.log(`${section}.${method}`, data.toString());
                                         let tableData = this.state.tableData;
                                         tableData.splice(key, 1);
                                         this.setState({
@@ -136,12 +123,10 @@ class ApplyList extends React.Component {
                                         $("#agreeButton" + key).html("同意");
                                         $("#refuseButton" + key).css("display", 'inline-block');
                                     } else if (section === 'system' && method === 'ExtrinsicFailed') {
-                                        console.log(`${section}.${method}`, data.toString());
                                         const [error, info] = data;
                                         if (error.isModule) {
                                             const decoded = api.registry.findMetaError(error.asModule);
                                             const { documentation, name, section } = decoded;
-                                            console.log(section + " " + name);
                                             this.setState({
                                                 confirmOpen: true,
                                                 messageContent: '操作失败，失败原因：' + name,
@@ -172,16 +157,15 @@ class ApplyList extends React.Component {
         this.setState({
             loaderState: "active",
         })
-        let params = {
-            id: item.id,
-            approvalStatus: 2,
-        }
-        http.post("producer/vcs/approval", params).then((resp) => {
+        let newRowData = JSON.parse(JSON.stringify(item));
+        newRowData.approveStatus = 2;
+        http.post("producer/vcs/approval", newRowData).then((resp) => {
             if (resp.data && resp.data.status === 1) {
                 let tableData = this.state.tableData;
                 tableData.splice(key, 1);
                 this.setState({
-                    tableData: tableData
+                    tableData: tableData,
+                    loaderState: "disabled",
                 })
             } else {
                 this.setState({
@@ -200,7 +184,6 @@ class ApplyList extends React.Component {
         let date = new Date(value).getDate();
         return year + "/" + month + "/" + date;
     }
-
 
     handleCancel = () => {
         this.setState({
@@ -233,7 +216,7 @@ class ApplyList extends React.Component {
                         {this.state.tableData.map((item, key) => {
                             return (<Table.Row key={key}>
                                 <Table.Cell >{key}</Table.Cell>
-                                <Table.Cell>{item.applyOrg}</Table.Cell>
+                                <Table.Cell>{item.authOrg}</Table.Cell>
                                 <Table.Cell>{item.customerNo}</Table.Cell>
                                 <Table.Cell>{item.docType}</Table.Cell>
                                 <Table.Cell>{this.getDateStr(item.startDate) + "~" + this.getDateStr(item.endDate)}</Table.Cell>
@@ -241,8 +224,8 @@ class ApplyList extends React.Component {
                                 <Table.Cell>{this.getDateStr(item.creationDate)}</Table.Cell>
                                 <Table.Cell>
                                     {<div>
-                                        <div className="operation" id={"agreeButton" + key} onClick={this.handleAgreeClick.bind(this, key, item)}>同意</div>
-                                        <div className="operation" id={"refuseButton" + key} onClick={this.handleRefuseClick.bind(this, key, item)}>拒绝</div>
+                                        <div className="operation" id={"agreeButton" + key} onClick={this.handleAgreeClick.bind(this, key, item)} >{item.approveStatus === 1 ? "撤销" : "同意"}</div>
+                                        <div className="operation" id={"refuseButton" + key} onClick={this.handleRefuseClick.bind(this, key, item)} style={{ 'display': item.approveStatus !== 0 ? "none" : "inline-block" }}>拒绝</div>
                                     </div>}
                                 </Table.Cell>
                             </Table.Row>)

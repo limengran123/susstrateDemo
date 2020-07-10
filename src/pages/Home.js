@@ -39,9 +39,10 @@ class Home extends React.Component {
 
   componentDidMount() {
     let userName = window.location ? window.location.pathname.slice(1) : "police";
-    let fileinforStr = localStorage.getItem('fileinformation');
-    let fileinformation = fileinforStr ? JSON.parse(fileinforStr) : {};
-    let name = fileinformation.name || "";
+    let credentialSubjectStr = localStorage.getItem('credentialSubject');
+    let credentialSubject = credentialSubjectStr ? JSON.parse(credentialSubjectStr) : {};
+    let fileInformation = credentialSubject.fileInformation || {};
+    let name = fileInformation.name || "";
     let loginName = "";
     if (userName === "policeUser") {
       loginName = name;
@@ -59,9 +60,10 @@ class Home extends React.Component {
     this.setState({
       loaderState: 'active',
     })
-    let fileinforStr = localStorage.getItem('fileinformation');
-    let fileinformation = fileinforStr ? JSON.parse(fileinforStr) : {};
-    let name = fileinformation.name || "";
+    let credentialSubjectStr = localStorage.getItem('credentialSubject');
+    let credentialSubject = credentialSubjectStr ? JSON.parse(credentialSubjectStr) : {};
+    let fileInformation = credentialSubject.fileInformation || {};
+    let name = fileInformation.name || "";
     let userName = window.location ? window.location.pathname.slice(1) : "police";
     let orgDidStr;
     let userDid = "";
@@ -81,14 +83,13 @@ class Home extends React.Component {
       if (!api) { return; }
       api.query.potModule.didDoc(userDid, (resp) => {
         docUrl = resp[0];
-        console.log(u8aToString(docUrl));
 
         let userType = "";
         let organization = "";
         let creationDate = "";
         let httpDidUrl = COMMON.URL_TO_NAME[userName] + u8aToString(docUrl);
         http.get(httpDidUrl).then((resp) => {
-          if (resp.data && resp.data === 1) {
+          if (resp.data && resp.data.status === 1) {
             let result = resp.data.data ? resp.data.data : {};
             userType = result.userType || "";
             organization = result.organization || "";
