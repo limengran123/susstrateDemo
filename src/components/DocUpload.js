@@ -34,10 +34,9 @@ class DocUpload extends React.Component {
                 { key: 4, value: 4, text: "建设银行武汉利济北路支行" },
             ],
             range: "",
+            resultArr: [],
         }
     }
-
-
 
 
     handleCancel = () => {
@@ -48,9 +47,30 @@ class DocUpload extends React.Component {
 
 
     handleConfirm = () => {
-        this.setState({
-            confirmOpen: false,
-        })
+        let resultArr = this.state.resultArr;
+        let isSuccess = true;
+        for (var i = 0; i < resultArr.length; i++) {
+            if (resultArr[i] === false) {
+                isSuccess = false;
+                break;
+            }
+        }
+        if (isSuccess && resultArr.length > 0) {
+            this.setState({
+                confirmOpen: false,
+                producer: "",
+                num: "",
+                docType: "",
+                date: "",
+                range: "",
+                docNameArr: [],
+            })
+        } else {
+            this.setState({
+                confirmOpen: false,
+            })
+        }
+
     }
 
     handleProduChange = (e, value) => {
@@ -161,7 +181,20 @@ class DocUpload extends React.Component {
         http.post("admin/docs/uploader", paramsData, headers).then((resp) => {
             if (resp.data && resp.data.status === 1) {
                 let fileList = resp.data.data ? resp.data.data.fileList : [];
-                this.setArchiveData(fileList);
+                this.setArchiveData(fileList, (resultArr) => {
+                    let resultTxt = "";
+                    for (var i = 0; i < resultArr.length; i++) {
+                        resultTxt += fileList[i].fileName + (resultArr[i] ? "上传成功;" : "上传失败;");
+                    }
+                    this.setState({
+                        resultArr: resultArr,
+                        loaderState: "disabled",
+                        confirmOpen: true,
+                        confirmContent: resultTxt,
+                    })
+
+                });
+
             } else {
                 this.setState({
                     loaderState: "disabled",
@@ -172,47 +205,41 @@ class DocUpload extends React.Component {
         })
     }
 
-    setArchiveData = (fileList) => {
+    setArchiveData = (fileList, callback) => {
         let windowName = window.location ? window.location.pathname.slice(1) : "police";
         let account = COMMON.ACCOUNT_TO_USER[windowName];
-        return new Promise(function (resolve, reject) {
-            useSubstrate.useSubstrateApi((api) => {
-                (async function () {
-                    if (!api) { return; }
-                    let { nonce } = await api.query.system.account(account);
-                    for (var i = 0; i < fileList.length; i++) {
-                        const filName = fileList[i].fileName;
-                        const resp = api.tx.potModule.setArchive(fileList[i].id, fileList[i].fileHash, fileList[i].ipfsUrl);
-                        resp.signAndSend(keyring.getPair(account), { nonce }, ({ events = [], status }) => {
-                            if (status.isInBlock) {
-                                events.forEach(({ event: { data, method, section }, phase }) => {
-                                    if (section === 'system' && method === 'ExtrinsicSuccess') {
-                                        // resolve([true, filName]);
-                                        resolve(this.setState({
-                                            loaderState: "disabled",
-                                            confirmOpen: true,
-                                            confirmContent: filName + "上传成功",
-                                        }));
-                                    } else if (section === 'system' && method === 'ExtrinsicFailed') {
-                                        const [error, info] = data;
-                                        if (error.isModule) {
-                                            const decoded = api.registry.findMetaError(error.asModule);
-                                            const { documentation, name, section } = decoded;
-                                            resolve(this.setState({
-                                                loaderState: "disabled",
-                                                confirmOpen: true,
-                                                confirmContent: filName + "上传失败，失败原因：" + name,
-                                            }));
-                                        }
-
+        useSubstrate.useSubstrateApi((api) => {
+            (async function () {
+                if (!api) { return; }
+                let { nonce } = await api.query.system.account(account);
+                let resultArr = [];
+                for (var i = 0; i < fileList.length; i++) {
+                    const filName = fileList[i].fileName;
+                    const resp = api.tx.potModule.setArchive(fileList[i].id, fileList[i].fileHash, fileList[i].ipfsUrl);
+                    await resp.signAndSend(keyring.getPair(account), { nonce }, ({ events = [], status }) => {
+                        if (status.isInBlock) {
+                            events.forEach(({ event: { data, method, section }, phase }) => {
+                                if (section === 'system' && method === 'ExtrinsicSuccess') {
+                                    // resolve([true, filName]);
+                                    resultArr.push(true)
+                                } else if (section === 'system' && method === 'ExtrinsicFailed') {
+                                    const [error, info] = data;
+                                    if (error.isModule) {
+                                        const decoded = api.registry.findMetaError(error.asModule);
+                                        const { documentation, name, section } = decoded;
+                                        resultArr.push(false)
                                     }
-                                });
-                            }
-                        }).catch(console.error);
-                        nonce = parseInt(nonce) + 1;
-                    }
-                })();
-            })
+
+                                }
+                                if (resultArr.length === fileList.length) {
+                                    callback(resultArr);
+                                }
+                            });
+                        }
+                    }).catch(console.error);
+                    nonce = parseInt(nonce) + 1;
+                }
+            })();
         })
     }
 

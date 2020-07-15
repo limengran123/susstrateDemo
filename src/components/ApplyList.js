@@ -180,7 +180,7 @@ class ApplyList extends React.Component {
 
     getDateStr = (value) => {
         let year = new Date(value).getFullYear();
-        let month = new Date(value).getMonth();
+        let month = new Date(value).getMonth() + 1;
         let date = new Date(value).getDate();
         return year + "/" + month + "/" + date;
     }

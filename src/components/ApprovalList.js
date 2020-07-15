@@ -1,6 +1,6 @@
 import React from 'react';
 import './common.css';
-import { Table } from 'semantic-ui-react';
+import { Table, Loader, Confirm } from 'semantic-ui-react';
 import { connect } from 'react-redux';
 import * as COMMON from '../tools/CommonConstant';
 import http from '../service/httpRequest';
@@ -8,10 +8,6 @@ import { resolvePlugin } from '@babel/core';
 
 const tableTtile = ["编号", "申请机构", "调用客户编号", "档案类型", "生成日期范围", "申请人", "申请日期", "授权真实性", "操作"];
 const tableData = [
-    // {"num": '001', "work": "公安部", "consumerNum": '20197897', 'type': '文书', "date": '2020/08/19', 'user': '张三', 'appDate': '2020/08/19', "isTrue": true},
-    // {"num": '002', "work": "公安部", "consumerNum": '20197897', 'type': '文书', "date": '2020/08/19', 'user': '张三', 'appDate': '2020/08/19', "isTrue": true},
-    // {"num": '003', "work": "公安部", "consumerNum": '20197897', 'type': '文书', "date": '2020/08/19', 'user': '张三', 'appDate': '2020/08/19', "isTrue": true},
-    // {"num": '004', "work": "公安部", "consumerNum": '20197897', 'type': '文书', "date": '2020/08/19', 'user': '张三', 'appDate': '2020/08/19', "isTrue": true},
 ]
 
 class ApprovalList extends React.Component {
@@ -19,25 +15,97 @@ class ApprovalList extends React.Component {
         super(props);
         this.state = {
             tableData: tableData,
+            loaderState: "disabled",
+            confirmOpen: false,
+            messageContent: '',
         }
     }
 
     componentDidMount() {
         http.get("admin/docs/application/list").then((resp) => {
             if (resp.data && resp.data.status === 1) {
+                let tableDataList = resp.data.data.list;
+                let newTbaleData = []
+                for (var i = 0; i < tableDataList.length; i++) {
+                    if (tableDataList[i].approveStatus === 0) {
+                        newTbaleData.push(tableDataList[i]);
+                    }
+                }
                 this.setState({
-                    tableData: resp.data.data.list
+                    tableData: newTbaleData
                 })
             }
         })
     }
 
-    handleAgreeClick = () => {
-
+    handleAgreeClick = (key, rowData) => {
+        this.setState({
+            loaderState: "active",
+        })
+        let newRowData = JSON.parse(JSON.stringify(rowData));
+        newRowData.approveStatus = 1;
+        http.post("admin/docs/approval", newRowData).then((resp) => {
+            if (resp.data && resp.data.status === 1) {
+                let tableData = this.state.tableData;
+                tableData.splice(key, 1);
+                this.setState({
+                    tableData: tableData,
+                    messageContent: "操作成功",
+                    loaderState: "disabled",
+                })
+            } else {
+                this.setState({
+                    confirmOpen: true,
+                    messageContent: '操作失败，失败原因：' + resp.data.msg,
+                    loaderState: "disabled",
+                })
+            }
+        })
     }
 
-    handleRefuseClick = () => {
+    handleRefuseClick = (key, rowData) => {
+        this.setState({
+            loaderState: "active",
+        })
+        let newRowData = JSON.parse(JSON.stringify(rowData));
+        newRowData.approveStatus = 2;
+        http.post("admin/docs/approval", newRowData).then((resp) => {
+            if (resp.data && resp.data.status === 1) {
+                let tableData = this.state.tableData;
+                tableData.splice(key, 1);
+                this.setState({
+                    tableData: tableData,
+                    messageContent: "操作成功",
+                    loaderState: "disabled",
+                })
+            } else {
+                this.setState({
+                    confirmOpen: true,
+                    messageContent: '操作失败，失败原因：' + resp.data.msg,
+                    loaderState: "disabled",
+                })
+            }
+        })
+    }
 
+    getDateStr = (value) => {
+        let year = new Date(value).getFullYear();
+        let month = new Date(value).getMonth() + 1;
+        let date = new Date(value).getDate();
+        return year + "/" + month + "/" + date;
+    }
+
+    handleCancel = () => {
+        this.setState({
+            confirmOpen: false,
+        })
+    }
+
+
+    handleConfirm = () => {
+        this.setState({
+            confirmOpen: false,
+        })
     }
 
     render() {
@@ -54,25 +122,32 @@ class ApprovalList extends React.Component {
                         </Table.Row>
                     </Table.Header>
                     <Table.Body>
-                        {tableData.map((item, key) => {
+                        {this.state.tableData.map((item, key) => {
                             return (<Table.Row key={key}>
-                                <Table.Cell>{item.num}</Table.Cell>
-                                <Table.Cell>{item.work}</Table.Cell>
-                                <Table.Cell>{item.consumerNum}</Table.Cell>
-                                <Table.Cell>{item.type}</Table.Cell>
-                                <Table.Cell>{item.date}</Table.Cell>
-                                <Table.Cell>{item.user}</Table.Cell>
-                                <Table.Cell>{item.appDate}</Table.Cell>
-                                <Table.Cell>{item.isTrue ? "真实" : "伪造"}</Table.Cell>
+                                <Table.Cell>{key}</Table.Cell>
+                                <Table.Cell>{item.applyOrg}</Table.Cell>
+                                <Table.Cell>{item.customerNo}</Table.Cell>
+                                <Table.Cell>{item.docType}</Table.Cell>
+                                <Table.Cell>{item.docDateRange}</Table.Cell>
+                                <Table.Cell>{item.applyUser}</Table.Cell>
+                                <Table.Cell>{this.getDateStr(item.creationDate)}</Table.Cell>
+                                <Table.Cell>{item.vcReal === 1 ? "真实" : "伪造"}</Table.Cell>
                                 <Table.Cell>
-                                    <div className="operation" onClick={this.handleAgreeClick}>同意</div>
-                                    <div className="operation" onClick={this.handleRefuseClick}>拒绝</div>
+                                    <div className="operation" onClick={this.handleAgreeClick.bind(this, key, item)}>同意</div>
+                                    <div className="operation" onClick={this.handleRefuseClick.bind(this, key, item)}>拒绝</div>
                                 </Table.Cell>
                             </Table.Row>)
                         })}
 
                     </Table.Body>
                 </Table>
+                <Loader className={this.state.loaderState} ></Loader>
+                <Confirm
+                    open={this.state.confirmOpen}
+                    content={this.state.messageContent}
+                    onCancel={this.handleCancel}
+                    onConfirm={this.handleConfirm}
+                />
             </div>
         )
     }
