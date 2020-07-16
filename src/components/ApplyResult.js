@@ -21,7 +21,6 @@ class ApplyResult extends React.Component {
             tableTtile: ["编号", "申请机构", "调用机构范围", "调用客户编号", "档案类型", "生成日期范围", "申请时间", "操作"],
             tableData: [],
             isShowMoreInfo: false,
-            userDid: "",
             loaderState: "disabled",
             confirmOpen: false,
             messageContent: '',
@@ -29,25 +28,22 @@ class ApplyResult extends React.Component {
     }
 
     componentDidMount() {
+        this.getResultTableData();
+    }
 
+    componentWillReceiveProps(nextProps) {
+        this.getResultTableData();
+
+    }
+
+    getResultTableData = () => {
         let credentialSubjectStr = localStorage.getItem('credentialSubject');
         let credentialSubject = credentialSubjectStr ? JSON.parse(credentialSubjectStr) : {};
         let fileInformation = credentialSubject.fileInformation || {};
         let orgDidStr = localStorage.getItem('userHasDid' + fileInformation.name);
         let orgDidObj = orgDidStr ? JSON.parse(orgDidStr) : {};
         let userDid = orgDidObj[fileInformation.name];
-        this.setState({
-            userDid: userDid || "",
-        })
-        this.getResultTableData();
-    }
-
-    componentWillReceiveProps(nextProps) {
-        this.getResultTableData();
-    }
-
-    getResultTableData = () => {
-        http.get("consumer/docs/application/pagedlist?applyUserDid=" + this.state.userDid).then((resp) => {
+        http.get("consumer/docs/application/pagedlist?applyUserDid=" + userDid).then((resp) => {
             if (resp.data && resp.data.status === 1) {
                 let newTableData = []
                 let tableDataList = resp.data.data.list;
@@ -73,7 +69,13 @@ class ApplyResult extends React.Component {
     }
 
     handleMoreClick = (rowData) => {
-        this.setState({ loaderState: "active" })
+        this.setState({
+            loaderState: "active",
+            isShowMoreInfo: true,
+            tableColumns: 5,
+            tableTtile: ["编号", "档案名称", "生成日期", "数据真实性", "操作"],
+            tableData: [],
+        })
         let tableData = [];
         // 获取详情里的文书档案列表
         http.get("consumer/docs/filelist?docApplyId=" + rowData[0]).then((resp) => {
@@ -82,10 +84,7 @@ class ApplyResult extends React.Component {
                 this.getDocTruth(respList, (tableData) => {
                     this.setState({
                         loaderState: "disabled",
-                        tableColumns: 5,
-                        tableTtile: ["编号", "档案名称", "生成日期", "数据真实性", "操作"],
                         tableData: tableData,
-                        isShowMoreInfo: true,
                     })
                 })
             }
@@ -149,16 +148,26 @@ class ApplyResult extends React.Component {
                                                 let dataStr = arcData.toString() || "";
                                                 console.log(dataStr)
                                                 let arcReal = dataStr.substring(1, dataStr.length - 1).split(",")[2];
+                                                let newArcReal = arcReal.substring(1, arcReal.length - 1);
                                                 console.log(arcReal)
-                                                if (arcReal === "Authentic") {
+                                                if (newArcReal === "Authentic") {
                                                     tableData.push([id, filName, creationDate, "真实"]);
-                                                } else if (arcReal === "Fake") {
+                                                } else if (newArcReal === "Fake") {
                                                     tableData.push([id, filName, creationDate, "伪造"]);
+                                                }
+                                                
+                                                if (tableData.length === resultList.length) {
+                                                    callback(tableData);
                                                 }
                                             })
                                         } else {
                                             tableData.push([id, filName, creationDate, name]);
                                         }
+
+                                        if (tableData.length === resultList.length) {
+                                            callback(tableData);
+                                        }
+
                                     } else {
                                         console.log(error.toString());
                                     }
@@ -185,7 +194,7 @@ class ApplyResult extends React.Component {
     }
 
     seePdfDoc = (rowData) => {
-        let pdfUrl = `/pdfjs-1.9.426-dist/web/viewer.html?file=http://${window.location.hostname}:8081/consumer/docs/preview?id=` + rowData[0];
+        let pdfUrl = `/pdfjs-1.9.426-dist/web/viewer.html?file=http://${window.location.hostname}:8081/consumer/docs/preview/` + rowData[0];
         window.open(pdfUrl, "_blank");
     }
 
