@@ -1,5 +1,4 @@
 import React from 'react';
-import PDF from 'react-pdf-js';
 import './common.css';
 import { Table, Loader, Confirm } from 'semantic-ui-react';
 import { connect } from 'react-redux';
@@ -8,9 +7,11 @@ import { getMenuDataAction } from '@/actions/menuAction';
 import useSubstrate from '../service/userSubstrateRequest.js';
 import * as COMMON from '../tools/CommonConstant';
 
+
 const stringToU8a = require('@polkadot/util/string/toU8a').default;
 const testKeyring = require('@polkadot/keyring/testing');
 const keyring = testKeyring.default();
+
 
 class ApplyResult extends React.Component {
     constructor(props) {
@@ -20,18 +21,25 @@ class ApplyResult extends React.Component {
             tableTtile: ["编号", "申请机构", "调用机构范围", "调用客户编号", "档案类型", "生成日期范围", "申请时间", "操作"],
             tableData: [],
             isShowMoreInfo: false,
-            userName: "",
+            userDid: "",
+            loaderState: "disabled",
+            confirmOpen: false,
+            messageContent: '',
         }
     }
 
     componentDidMount() {
-        this.getResultTableData();
+
         let credentialSubjectStr = localStorage.getItem('credentialSubject');
         let credentialSubject = credentialSubjectStr ? JSON.parse(credentialSubjectStr) : {};
         let fileInformation = credentialSubject.fileInformation || {};
+        let orgDidStr = localStorage.getItem('userHasDid' + fileInformation.name);
+        let orgDidObj = orgDidStr ? JSON.parse(orgDidStr) : {};
+        let userDid = orgDidObj[fileInformation.name];
         this.setState({
-            userName: fileInformation.name || "",
+            userDid: userDid || "",
         })
+        this.getResultTableData();
     }
 
     componentWillReceiveProps(nextProps) {
@@ -39,7 +47,7 @@ class ApplyResult extends React.Component {
     }
 
     getResultTableData = () => {
-        http.get("consumer/docs/application/pagedlist").then((resp) => {
+        http.get("consumer/docs/application/pagedlist?applyUserDid=" + this.state.userDid).then((resp) => {
             if (resp.data && resp.data.status === 1) {
                 let newTableData = []
                 let tableDataList = resp.data.data.list;
@@ -57,8 +65,7 @@ class ApplyResult extends React.Component {
                 this.setState({
                     tableColumns: 8,
                     tableTtile: ["编号", "申请机构", "调用机构范围", "调用客户编号", "档案类型", "生成日期范围", "申请时间", "操作"],
-                    // tableData: newTableData,
-                    tableData: [[0, "建设银行", "支行", "20200909", "文书档案", "20200708-20200809", "20200809"]],
+                    tableData: newTableData,
                     isShowMoreInfo: false,
                 })
             }
@@ -66,6 +73,7 @@ class ApplyResult extends React.Component {
     }
 
     handleMoreClick = (rowData) => {
+        this.setState({ loaderState: "active" })
         let tableData = [];
         // 获取详情里的文书档案列表
         http.get("consumer/docs/filelist?docApplyId=" + rowData[0]).then((resp) => {
@@ -73,10 +81,10 @@ class ApplyResult extends React.Component {
                 let respList = resp.data.data;
                 this.getDocTruth(respList, (tableData) => {
                     this.setState({
+                        loaderState: "disabled",
                         tableColumns: 5,
                         tableTtile: ["编号", "档案名称", "生成日期", "数据真实性", "操作"],
-                        // tableData: tableData,
-                        tableData: [[1, "xxx档案",'20200909', 1]],
+                        tableData: tableData,
                         isShowMoreInfo: true,
                     })
                 })
@@ -93,46 +101,82 @@ class ApplyResult extends React.Component {
         }
         let tableData = [];
         let account = COMMON.ACCOUNT_TO_USER["police"];
-        // useSubstrate.useSubstrateApi((api) => {
-        //     (async function () {
-        //         if (!api) { return; }
-        //         let { nonce } = await api.query.system.account(account);
-        for (var i = 0; i < respList.length; i++) {
-            const filName = respList[i].fileName;
-            const id = respList[i].id || "";
-            const creationDate = respList[i].creationDate ? respList[i].creationDate.split(" ")[0] : "";
-            // 根据每条档案副本查询档案hash
-            // http.get("consumer/").then((resp) => {
-            //     if (resp.data && resp.data.status === 1) {
-            //         let docId = resp.data.data.docId;
-            //         let docHash = resp.data.data.hash;
-            //         const result = api.tx.potModule.verify(docId, docHash);
-            //         result.signAndSend(keyring.getPair(account), { nonce }, ({ events = [], status }) => {
-            //             if (status.isInBlock) {
-            //                 events.forEach(({ event: { data, method, section }, phase }) => {
-            //                     if (section === 'system' && method === 'ExtrinsicSuccess') {
-            tableData.push([id, filName, creationDate, true])
-            // } else if (section === 'system' && method === 'ExtrinsicFailed') {
-            //     const [error, info] = data;
-            //     if (error.isModule) {
-            //         const decoded = api.registry.findMetaError(error.asModule);
-            //         const { documentation, name, section } = decoded;
-            //         tableData.push([id, filName, creationDate, false])
-            //     }
-
-            // }
-            if (tableData.length === respList.length) {
-                callback(tableData);
+        // 根据每条档案副本查询档案hash
+        http.post("consumer/docs/validator", respList).then((resp) => {
+            if (!resp.data || resp.data.status === 0) {
+                callback([]);
             }
-            // });
-            //     }
-            // }).catch(console.error);
-        }
-        //         })
-        //         nonce = parseInt(nonce) + 1;
-        //     }
-        // })();
-        // })
+            let resultList = resp.data.data;
+            useSubstrate.useSubstrateApi((api) => {
+                (async function () {
+                    if (!api) { return; }
+                    let { nonce } = await api.query.system.account(account);
+                    for (var i = 0; i < resultList.length; i++) {
+                        const filName = resultList[i].fileName;
+                        const id = resultList[i].id || "";
+                        const creationDate = resultList[i].creationDate ? resultList[i].creationDate.split(" ")[0] : "";
+                        const fileId = resultList[i].fileId;
+                        const result = api.tx.potModule.verify(fileId, resultList[i].fileHash);
+                        await result.signAndSend(keyring.getPair(account), { nonce }, ({ events = [], status }) => {
+                            if (status.isInBlock) {
+                                events.filter(({ event: { section } }) => {
+                                    return section === 'potModule'
+                                }).forEach(({ event: { data, method, section } }) => {
+                                    console.log(`${section}.${method}`, data.toString());
+                                    if (method === "Verified") {
+                                        let respDataStr = data.toString();
+                                        let arcDataReal = respDataStr.substring(1, respDataStr.length - 1).split(",")[2];
+                                        if (arcDataReal === "true") {
+                                            tableData.push([id, filName, creationDate, "真实"]);
+                                        } else {
+                                            tableData.push([id, filName, creationDate, "伪造"]);
+                                        }
+                                    }
+                                    if (tableData.length === resultList.length) {
+                                        callback(tableData);
+                                    }
+                                });
+
+                                events.filter(({ event: { section, method } }) => {
+                                    return section === 'system' && method === 'ExtrinsicFailed'
+                                }).forEach(({ event: { data: [error, info] } }) => {
+                                    if (error.isModule) {
+                                        const decoded = api.registry.findMetaError(error.asModule);
+                                        const { documentation, name, section } = decoded;
+                                        console.log(`${section}.${name}: ${documentation.join(' ')}`);
+                                        if (name === "ArchiveIsVerified") {
+                                            api.query.potModule.archDoc(fileId, (arcData) => {
+                                                let dataStr = arcData.toString() || "";
+                                                console.log(dataStr)
+                                                let arcReal = dataStr.substring(1, dataStr.length - 1).split(",")[2];
+                                                console.log(arcReal)
+                                                if (arcReal === "Authentic") {
+                                                    tableData.push([id, filName, creationDate, "真实"]);
+                                                } else if (arcReal === "Fake") {
+                                                    tableData.push([id, filName, creationDate, "伪造"]);
+                                                }
+                                            })
+                                        } else {
+                                            tableData.push([id, filName, creationDate, name]);
+                                        }
+                                    } else {
+                                        console.log(error.toString());
+                                    }
+
+                                    if (tableData.length === resultList.length) {
+                                        callback(tableData);
+                                    }
+                                });
+
+
+
+                            }
+                        }).catch(console.error);
+                        nonce = parseInt(nonce) + 1;
+                    }
+                })();
+            })
+        })
 
     }
 
@@ -140,21 +184,16 @@ class ApplyResult extends React.Component {
         window.open("consumer/docs/downloader?id=" + rowData[0], "_self");
     }
 
-    // seePdfDoc = (rowData) => {
-    //     return  (
-        // return (
-        //     <div className="pdf">
-        //         <PDF
-        //             file="./somefile.pdf"
-        //         />
-        //     </div>
-        // )
+    seePdfDoc = (rowData) => {
+        let pdfUrl = `/pdfjs-1.9.426-dist/web/viewer.html?file=http://${window.location.hostname}:8081/consumer/docs/preview?id=` + rowData[0];
+        window.open(pdfUrl, "_blank");
+    }
 
-    // }
+
 
     render() {
         return (
-            <div style={{ 'width': '99%' }} id="applyListDiv">
+            <div style={{ 'width': '99%' }} id="applyListDiv" >
                 <Table columns={this.state.tableColumns} id="applyTableList">
                     <Table.Header>
                         <Table.Row>
@@ -168,13 +207,12 @@ class ApplyResult extends React.Component {
                         {this.state.tableData.map((item, num) => {
                             return (<Table.Row key={num}>{
                                 item.map((value, index) => {
-                                    return (<Table.Cell key={index}>{index === 0 ? index : value}</Table.Cell>)
+                                    return (<Table.Cell key={index}>{index === 0 ? num : value}</Table.Cell>)
                                 })
                             }
                                 {this.state.isShowMoreInfo ?
                                     <Table.Cell >
-                                        {/* <div className="operation" ><iframe src="./somefile.pdf">查看</iframe> </div> */}
-                                        <div className="operation" ><a href="./somefile.pdf">查看</a> </div>
+                                        <div className="operation" onClick={this.seePdfDoc.bind(this, item)}>查看 </div>
                                         <div className="operation" onClick={this.download.bind(this, item)}> 下载</div>
                                     </Table.Cell>
                                     : <Table.Cell className="operation" onClick={this.handleMoreClick.bind(this, item)} >查看详情</Table.Cell>
@@ -183,7 +221,14 @@ class ApplyResult extends React.Component {
                         })}
                     </Table.Body>
                 </Table>
-            </div>
+                <Loader className={this.state.loaderState} ></Loader>
+                <Confirm
+                    open={this.state.confirmOpen}
+                    content={this.state.messageContent}
+                    onCancel={this.handleCancel}
+                    onConfirm={this.handleConfirm}
+                />
+            </div >
         )
     }
 }

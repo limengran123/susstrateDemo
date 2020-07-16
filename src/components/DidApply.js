@@ -21,7 +21,6 @@ class DidApply extends React.Component {
             confirmOpen: false,
             messageContent: '',
             loaderState: "disabled",
-            registerSuccess: false,
         }
     }
 
@@ -83,6 +82,20 @@ class DidApply extends React.Component {
             "userType": userType,
             "organization": organization,
         }
+        if (userName === "ccb") {
+            params = {
+                "mainKeyPair": {
+                    "publicKey": u8aToHex(keyring.getPair(accountId1).publicKey) || "",
+                    "privateKey": u8aToHex(COMMON.getPairFromAccount("//CHARLIE").secretKey) || "",
+                },
+                "secondKeyPair": {
+                    "publicKey": u8aToHex(keyring.getPair(accountId2).publicKey) || "",
+                    "privateKey": u8aToHex(COMMON.getPairFromAccount("//BOB").secretKey) || "",
+                },
+                "userType": userType,
+                "organization": organization,
+            }
+        }
 
         http.post(url, params).then((resp) => {
             if (resp.data && resp.data.status === 1) {
@@ -124,18 +137,25 @@ class DidApply extends React.Component {
                                         loaderState: "disabled",
                                         confirmOpen: true,
                                         messageContent: "生成成功",
-                                        registerSuccess: true,
                                     })
                                 } else if (section === 'system' && method === 'ExtrinsicFailed') {
                                     const [error, info] = data;
                                     if (error.isModule) {
                                         const decoded = api.registry.findMetaError(error.asModule);
                                         const { documentation, name, section } = decoded;
-                                        this.setState({
-                                            loaderState: "disabled",
-                                            confirmOpen: true,
-                                            messageContent: "生成失败,失败原因：" + name,
-                                        })
+                                        if (name === "DidAlreadyExist") {
+                                            this.setState({
+                                                loaderState: "disabled",
+                                                confirmOpen: true,
+                                                messageContent: "did已存在，did信息：" + did,
+                                            })
+                                        } else {
+                                            this.setState({
+                                                loaderState: "disabled",
+                                                confirmOpen: true,
+                                                messageContent: "did上链登记失败，失败原因" + name + "。请重试或联系管理员。",
+                                            })
+                                        }
                                     }
                                 }
 
@@ -175,9 +195,11 @@ class DidApply extends React.Component {
         this.setState({
             confirmOpen: false,
         })
-        if (!this.state.registerSuccess) {
+
+        if (this.state.messageContent.indexOf("登记失败") > -1) {
             return;
         }
+
         // 生成Did后跳转至对应的页面
         if (userName === "police") {
             this.props.GET_MENU_DATA("调用人员DID生成");

@@ -6,7 +6,7 @@ import axios from 'axios';
 var instance = axios.create({
     baseURL: "/",
     // baseURL: "http://11.63.179.9:8081/",
-    // baseURL: "http://192.168.43.50:8083/",
+    // baseURL: "http://192.168.43.50:8081/",
     timeout: 100000,
     headers: {
         // 'X-Requested-With': 'XMLHttpRequest',

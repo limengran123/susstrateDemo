@@ -74,11 +74,13 @@ class UserApply extends React.Component {
         if (this.state.numMessage.length > 0) {
             return;
         }
+        let vcObj = JSON.parse(this.state.fileString);
+        vcObj.claims[0].credentialSubject[0].fileInformation.number = this.state.num;
         let seed = escape(this.state.userName).split('%').join('').padEnd(32, ' ');
         let pairs = COMMON.getallPairs(stringToU8a(seed));
         let params = {
             "sk": u8aToHex(pairs.secretKey),
-            "vc": this.state.fileString,
+            "vc": JSON.stringify(vcObj),
         };
         useSubstrate.useSubstrateApi((api) => {
             if (!api) { return; }
