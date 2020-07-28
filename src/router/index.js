@@ -49,5 +49,9 @@ const routes=[
     path:'/userLogin',
     component:asyncComponents(()=>import("@/pages/UserLogin")), 
   },
+  {
+    path:'/didRegister',
+    component:asyncComponents(()=>import("@/pages/Home")), 
+  },
 ];
 export default routes;

@@ -142,6 +142,7 @@ class Home extends React.Component {
     let userName = window.location ? window.location.pathname.slice(1) : "police";
     const userNameSystem = {
       "police": "公安部业务系统",
+      "didRegister": "公安部业务系统",
       "policeUser": "公安部业务系统",
       "ccb": "建设银行业务系统",
       "fintech": "云档案产品"
@@ -150,6 +151,7 @@ class Home extends React.Component {
       "fintech": "../image/fintechlogo.png",
       "ccb": "../image/ccblogo.png",
       "police": "../image/policelogo.png",
+      "didRegister": "../image/policelogo.png",
       "policeUser": "../image/policelogo.png",
     };
     return (

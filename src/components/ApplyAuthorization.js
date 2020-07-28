@@ -154,7 +154,7 @@ class ApplyAuthorization extends React.Component {
         let authDid = this.state.authOrgDidMap.get(authOrgName);
         let operateorName = this.state.user || this.state.user === 0 ? this.state.userOptions[this.state.user].text : "";
 
-        const orgDidStr = localStorage.getItem("orgrHasDid" + userName) || "";
+        const orgDidStr = localStorage.getItem("orgrHasDiddidRegister") || "";
         const orgDid = orgDidStr ? JSON.parse(orgDidStr)["公安部"] : "";
 
         const operateorDidStr = localStorage.getItem("userHasDid" + operateorName) || "";
@@ -176,7 +176,7 @@ class ApplyAuthorization extends React.Component {
 
         const paramStr = JSON.stringify(param);
         // 调用区块链申请授权接口
-        const userKeyObj = localStorage.getItem("orgrHasPrivateKey" + userName) || "";
+        const userKeyObj = localStorage.getItem("orgrHasPrivateKeydidRegister") || "";
         const publicKey = userKeyObj ? JSON.parse(userKeyObj)["公安部"] : "";
 
         useSubstrate.useSubstrateApi((api) => {

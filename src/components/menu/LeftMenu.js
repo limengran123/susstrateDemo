@@ -46,31 +46,24 @@ class LeftMenu extends React.Component {
     }
 
 
-    if (this.props.menuTagData.length === 0) {
-      if (did && this.state.user === "police") {
-        this.setState({
-          activeItem: "调用人员DID生成",
-        });
-        this.props.GET_MENU_DATA("调用人员DID生成");
-      }
-      // if (!did) {
-      //   menuItemObj = {
-      //     "police": ["DID生成", "调用人员DID生成"],
-      //     "ccb": ["DID生成"],
-      //     "fintech": ["DID生成"],
-      //     "policeUser": ["申请调用", "调用结果", "授权书管理"],
-      //   };
-
-      //   this.setState({
-      //     activeItem: menuItemObj[this.state.user][0],
-      //   });
-      //   this.props.GET_MENU_DATA(menuItemObj[this.state.user][0]);
-      // } else {
-        if (this.state.user === "police") {
+    if (this.state.user === "didRegister") {
+      this.setState({
+        activeItem: "DID生成",
+      });
+      this.props.GET_MENU_DATA("DID生成");
+    } else {
+      if (this.props.menuTagData.length === 0) {
+        if (!did) {
+          menuItemObj = {
+            "police": ["申请授权"],
+            "ccb": ["DID生成"],
+            "fintech": ["DID生成"],
+            "policeUser": ["申请调用", "调用结果", "授权书管理"],
+          };
           this.setState({
-            activeItem: "调用人员DID生成",
+            activeItem: menuItemObj[this.state.user][0],
           });
-          this.props.GET_MENU_DATA("调用人员DID生成");
+          this.props.GET_MENU_DATA(menuItemObj[this.state.user][0]);
         } else {
           menuItemObj = COMMON.menuItemObj;
           this.setState({
@@ -79,8 +72,7 @@ class LeftMenu extends React.Component {
           });
           this.props.GET_MENU_DATA(menuItemObj[this.state.user][0]);
         }
-      // }
-
+      }
     }
     if (this.state.user === "policeUser") {
       this.props.GET_MENU_DATA(menuItemObj[this.state.user][2]);
@@ -95,7 +87,8 @@ class LeftMenu extends React.Component {
   componentWillReceiveProps(nextProps) {
     if (nextProps.menuTagData === "DID生成" || nextProps.menuTagData === "调用人员DID生成") {
       menuItemObj = {
-        "police": ["DID生成", "调用人员DID生成"],
+        "didRegister": ["DID生成", "调用人员DID生成"],
+        "police": ["申请授权"],
         "ccb": ["DID生成"],
         "fintech": ["DID生成"],
         "policeUser": ["申请调用", "调用结果", "授权书管理"],

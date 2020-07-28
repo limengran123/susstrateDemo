@@ -191,6 +191,7 @@ class DocUpload extends React.Component {
                         loaderState: "disabled",
                         confirmOpen: true,
                         confirmContent: resultTxt,
+                        fileList: []
                     })
 
                 });

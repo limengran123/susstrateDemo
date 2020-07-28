@@ -109,6 +109,7 @@ class DidApply extends React.Component {
                         [authUserNmae]: did
                     }
                     localStorage.setItem('userHasDid' + authUserNmae, JSON.stringify(userDidObj));
+                    localStorage.setItem("operatorArr", JSON.stringify(newOperatorArr));
                 } else {
                     //将Did保存在本地
                     let orgDidObj = {
@@ -132,7 +133,6 @@ class DidApply extends React.Component {
                         if (status.isInBlock) {
                             events.forEach(({ event: { data, method, section }, phase }) => {
                                 if (section === 'system' && method === 'ExtrinsicSuccess') {
-                                    localStorage.setItem("operatorArr", JSON.stringify(newOperatorArr));
                                     this.setState({
                                         loaderState: "disabled",
                                         confirmOpen: true,
@@ -217,13 +217,13 @@ class DidApply extends React.Component {
     render() {
         let userName = window.location ? window.location.pathname.slice(1) : "police";
         let userNameTxt = "";
-        if (userName === "police") {
+        if (userName === "didRegister") {
             userNameTxt = "公安部";
         } else if (userName === "ccb") {
             userNameTxt = "建设银行办公室";
         } else if (userName === "fintech") {
             userNameTxt = "建信金科";
-        }
+        } 
         return (
             <div id="didApplyDiv">
                 <div>

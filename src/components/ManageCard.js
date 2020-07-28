@@ -9,32 +9,34 @@ class ManageCard extends React.Component {
             number: "",
             filetype: "",
             initiator: "",
-            startDate: "",
-            endDate: "",
+            validdate: "",
+            dateRange: "",
         }
     }
 
     componentDidMount() {
-        let credentialSubjectStr = localStorage.getItem('credentialSubject');
-        let credentialSubject = credentialSubjectStr ? JSON.parse(credentialSubjectStr) : {};
+        let fileString = localStorage.getItem('fileString');
+        let fileObj = fileString ? JSON.parse(fileString) : {};
+        let credentialSubject = fileObj.claims ? fileObj.claims[0].credentialSubject[0] : {};
         let fileInformation = credentialSubject.fileInformation || {};
         let number = fileInformation.number || "";
         let filetype = fileInformation.fileType || "";
         let initiator = fileInformation.validAgency || "";
         let validdate = fileInformation.validDate;
-        let startDate = "";
-        let endDate = "";
-        if (validdate && validdate.indexOf("~") > -1) {
-            startDate = validdate.split("~")[0];
-            endDate = validdate.split("~")[1];
-        }
-
+        let issuanceDate = fileObj.claims[0].issuanceDate || "";
+        let overDate = issuanceDate ?  new Date(issuanceDate).getTime() + 30 * 24 * 3600 * 1000 : "";
+        let dateRangeYear = overDate ? new Date(overDate).getFullYear() : "";
+        let dateRangeMonth = overDate ? new Date(overDate).getMonth() + 1 : "";
+        dateRangeMonth = dateRangeMonth < 10 ? "0" + dateRangeMonth : dateRangeMonth;
+        let dateRangeDate = overDate ? new Date(overDate).getDate() : "";
+        dateRangeDate = dateRangeDate < 10 ? "0" + dateRangeDate : dateRangeDate;
+        let dateRange = issuanceDate ? dateRangeYear + "-" + dateRangeMonth +  "-" + dateRangeDate : "";
         this.setState({
             number: number,
             filetype: filetype,
             initiator: initiator,
-            startDate: startDate,
-            endDate: endDate,
+            validdate: validdate,
+            dateRange: dateRange
         })
     }
 
@@ -55,7 +57,7 @@ class ManageCard extends React.Component {
                     </div>
                     <div>
                         <span>调用日期:</span>
-                        <span>{this.state.startDate}</span>
+                        <span>{this.state.validdate}</span>
                     </div>
                     <div>
                         <span>调用机构范围:</span>
@@ -63,7 +65,7 @@ class ManageCard extends React.Component {
                     </div>
                     <div>
                         <span>失效日期:</span>
-                        <span>{this.state.endDate}</span>
+                        <span>{this.state.dateRange}</span>
                     </div>
                 </div>
             </div>

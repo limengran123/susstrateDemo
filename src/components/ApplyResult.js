@@ -18,7 +18,7 @@ class ApplyResult extends React.Component {
         super(props);
         this.state = {
             tableColumns: 8,
-            tableTtile: ["编号", "申请机构", "调用机构范围", "调用客户编号", "档案类型", "生成日期范围", "申请时间", "操作"],
+            tableTtile: ["编号", "申请机构", "调用机构范围", "调用客户编号", "档案类型", "生成日期范围", "申请时间", "审批状态", "操作"],
             tableData: [],
             isShowMoreInfo: false,
             loaderState: "disabled",
@@ -55,12 +55,15 @@ class ApplyResult extends React.Component {
                     let docDateRange = tableDataList[i].docDateRange || "";
                     let creationDate = tableDataList[i].creationDate ? tableDataList[i].creationDate.split(" ")[0] : "";
                     let producerId = tableDataList[i].producerId || "";
-                    let rowData = [producerId, applyOrg, callOrgRange, customerNo, docType, docDateRange, creationDate];
+                    let statusToTextArr = ["未审批", "已通过", "已拒绝"]
+                    let approveStatus = statusToTextArr[tableDataList[i].approveStatus]
+                    approveStatus = tableDataList[i].approveStatus === 100 ? "未查询到相关档案" : approveStatus
+                    let rowData = [producerId, applyOrg, callOrgRange, customerNo, docType, docDateRange, creationDate, approveStatus];
                     newTableData.push(rowData);
                 }
                 this.setState({
-                    tableColumns: 8,
-                    tableTtile: ["编号", "申请机构", "调用机构范围", "调用客户编号", "档案类型", "生成日期范围", "申请时间", "操作"],
+                    tableColumns: 9,
+                    tableTtile: ["编号", "申请机构", "调用机构范围", "调用客户编号", "档案类型", "生成日期范围", "申请时间", "审批状态", "操作"],
                     tableData: newTableData,
                     isShowMoreInfo: false,
                 })
@@ -155,7 +158,7 @@ class ApplyResult extends React.Component {
                                                 } else if (newArcReal === "Fake") {
                                                     tableData.push([id, filName, creationDate, "伪造"]);
                                                 }
-                                                
+
                                                 if (tableData.length === resultList.length) {
                                                     callback(tableData);
                                                 }
@@ -220,11 +223,13 @@ class ApplyResult extends React.Component {
                                 })
                             }
                                 {this.state.isShowMoreInfo ?
-                                    <Table.Cell >
+                                    <Table.Cell>
                                         <div className="operation" onClick={this.seePdfDoc.bind(this, item)}>查看 </div>
                                         <div className="operation" onClick={this.download.bind(this, item)}> 下载</div>
                                     </Table.Cell>
-                                    : <Table.Cell className="operation" onClick={this.handleMoreClick.bind(this, item)} >查看详情</Table.Cell>
+                                    : <Table.Cell>
+                                        <div style={{'display': item[7] === "已通过" ? "inline-block" : "none"}} className="operation" onClick={this.handleMoreClick.bind(this, item)}>查看详情</div>
+                                    </Table.Cell>
                                 }
                             </Table.Row>)
                         })}
