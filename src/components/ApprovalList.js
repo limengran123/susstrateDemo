@@ -22,7 +22,7 @@ class ApprovalList extends React.Component {
     }
 
     componentDidMount() {
-        http.get("admin/docs/application/list").then((resp) => {
+        http.get("admin/docs/application/list?pageSize=200").then((resp) => {
             if (resp.data && resp.data.status === 1) {
                 let tableDataList = resp.data.data.list;
                 let newTbaleData = []

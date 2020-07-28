@@ -6,7 +6,7 @@ import http from '../service/httpRequest';
 import { getMenuDataAction } from '@/actions/menuAction';
 import useSubstrate from '../service/userSubstrateRequest.js';
 import * as COMMON from '../tools/CommonConstant';
-
+import { hexToString } from '@polkadot/util';
 
 const stringToU8a = require('@polkadot/util/string/toU8a').default;
 const testKeyring = require('@polkadot/keyring/testing');
@@ -43,7 +43,7 @@ class ApplyResult extends React.Component {
         let orgDidStr = localStorage.getItem('userHasDid' + fileInformation.name);
         let orgDidObj = orgDidStr ? JSON.parse(orgDidStr) : {};
         let userDid = orgDidObj[fileInformation.name];
-        http.get("consumer/docs/application/pagedlist?applyUserDid=" + userDid).then((resp) => {
+        http.get("consumer/docs/application/pagedlist?pageSize=200&applyUserDid=" + userDid).then((resp) => {
             if (resp.data && resp.data.status === 1) {
                 let newTableData = []
                 let tableDataList = resp.data.data.list;
@@ -112,79 +112,35 @@ class ApplyResult extends React.Component {
             useSubstrate.useSubstrateApi((api) => {
                 (async function () {
                     if (!api) { return; }
-                    let { nonce } = await api.query.system.account(account);
+                    // let { nonce } = await api.query.system.account(account);
                     for (var i = 0; i < resultList.length; i++) {
                         const filName = resultList[i].fileName;
                         const id = resultList[i].id || "";
                         const creationDate = resultList[i].creationDate ? resultList[i].creationDate.split(" ")[0] : "";
                         const fileId = resultList[i].fileId;
-                        const result = api.tx.potModule.verify(fileId, resultList[i].fileHash);
-                        await result.signAndSend(keyring.getPair(account), { nonce }, ({ events = [], status }) => {
-                            if (status.isInBlock) {
-                                events.filter(({ event: { section } }) => {
-                                    return section === 'potModule'
-                                }).forEach(({ event: { data, method, section } }) => {
-                                    console.log(`${section}.${method}`, data.toString());
-                                    if (method === "Verified") {
-                                        let respDataStr = data.toString();
-                                        let arcDataReal = respDataStr.substring(1, respDataStr.length - 1).split(",")[2];
-                                        if (arcDataReal === "true") {
-                                            tableData.push([id, filName, creationDate, "真实"]);
-                                        } else {
-                                            tableData.push([id, filName, creationDate, "伪造"]);
-                                        }
-                                    }
-                                    if (tableData.length === resultList.length) {
-                                        callback(tableData);
-                                    }
-                                });
-
-                                events.filter(({ event: { section, method } }) => {
-                                    return section === 'system' && method === 'ExtrinsicFailed'
-                                }).forEach(({ event: { data: [error, info] } }) => {
-                                    if (error.isModule) {
-                                        const decoded = api.registry.findMetaError(error.asModule);
-                                        const { documentation, name, section } = decoded;
-                                        console.log(`${section}.${name}: ${documentation.join(' ')}`);
-                                        if (name === "ArchiveIsVerified") {
-                                            api.query.potModule.archDoc(fileId, (arcData) => {
-                                                let dataStr = arcData.toString() || "";
-                                                console.log(dataStr)
-                                                let arcReal = dataStr.substring(1, dataStr.length - 1).split(",")[2];
-                                                let newArcReal = arcReal.substring(1, arcReal.length - 1);
-                                                console.log(arcReal)
-                                                if (newArcReal === "Authentic") {
-                                                    tableData.push([id, filName, creationDate, "真实"]);
-                                                } else if (newArcReal === "Fake") {
-                                                    tableData.push([id, filName, creationDate, "伪造"]);
-                                                }
-
-                                                if (tableData.length === resultList.length) {
-                                                    callback(tableData);
-                                                }
-                                            })
-                                        } else {
-                                            tableData.push([id, filName, creationDate, name]);
-                                        }
-
-                                        if (tableData.length === resultList.length) {
-                                            callback(tableData);
-                                        }
-
-                                    } else {
-                                        console.log(error.toString());
-                                    }
-
-                                    if (tableData.length === resultList.length) {
-                                        callback(tableData);
-                                    }
-                                });
-
-
-
+                        const fileHash = resultList[i].fileHash
+                        api.query.potModule.archDoc(fileId, (arcData) => {
+                            let dataStr = arcData.toString() || "";
+                            console.log(dataStr)
+                            let hashStr = dataStr.substring(1, dataStr.length - 1).split(",")[0];
+                            let newHashStr = hexToString(hashStr.substring(1, hashStr.length -1 ));
+                            console.log(newHashStr)
+                            if (newHashStr === fileHash) {
+                                tableData.push([id, filName, creationDate, "真实"]);
+                            } else {
+                                tableData.push([id, filName, creationDate, "伪造"]);
                             }
-                        }).catch(console.error);
-                        nonce = parseInt(nonce) + 1;
+
+                            if (tableData.length === resultList.length) {
+                                callback(tableData);
+                            }
+                        })
+
+                        if (tableData.length === resultList.length) {
+                            callback(tableData);
+                        }
+
+                        // nonce = parseInt(nonce) + 1;
                     }
                 })();
             })
@@ -228,7 +184,7 @@ class ApplyResult extends React.Component {
                                         <div className="operation" onClick={this.download.bind(this, item)}> 下载</div>
                                     </Table.Cell>
                                     : <Table.Cell>
-                                        <div style={{'display': item[7] === "已通过" ? "inline-block" : "none"}} className="operation" onClick={this.handleMoreClick.bind(this, item)}>查看详情</div>
+                                        <div style={{ 'display': item[7] === "已通过" ? "inline-block" : "none" }} className="operation" onClick={this.handleMoreClick.bind(this, item)}>查看详情</div>
                                     </Table.Cell>
                                 }
                             </Table.Row>)

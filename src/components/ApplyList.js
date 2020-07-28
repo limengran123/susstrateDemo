@@ -26,7 +26,7 @@ class ApplyList extends React.Component {
     }
 
     componentDidMount() {
-        http.get("producer/vcs/application/pagedlist").then((resp) => {
+        http.get("producer/vcs/application/pagedlist?pageSize=200").then((resp) => {
             if (resp.data && resp.data.status === 1) {
                 let resultData = resp.data.data ? resp.data.data : {};
                 let tableData = resultData.list;
