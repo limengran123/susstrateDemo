@@ -69,6 +69,8 @@ class Home extends React.Component {
     let userDid = "";
     if (userName === "policeUser") {
       orgDidStr = localStorage.getItem('userHasDid' + name);
+    } else if (userName === "police" || userName === "didRegister") {
+      orgDidStr = localStorage.getItem('userHasDiddidRegister');
     } else {
       orgDidStr = localStorage.getItem('orgrHasDid' + userName);
     }
@@ -186,7 +188,11 @@ class Home extends React.Component {
                 <span className='didTitle'>创建时间：</span>
                 <span>{this.state.creationDate}</span>
               </div>
-              <Button primary id="backButton" onClick={this.backClick}>返回</Button>
+              <div>
+                <Button primary id="backButton" onClick={this.backClick}>
+                  <span style={{"display": "inline-block","width": "30px"}}>返回</span>
+                </Button>
+              </div>
             </div> :
             <div className="content">
               <Content menuData={this.props.menus} user={userName} />
