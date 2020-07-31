@@ -70,7 +70,7 @@ class Home extends React.Component {
     if (userName === "policeUser") {
       orgDidStr = localStorage.getItem('userHasDid' + name);
     } else if (userName === "police" || userName === "didRegister") {
-      orgDidStr = localStorage.getItem('userHasDiddidRegister');
+      orgDidStr = localStorage.getItem('orgrHasDiddidRegister');
     } else {
       orgDidStr = localStorage.getItem('orgrHasDid' + userName);
     }
@@ -137,7 +137,13 @@ class Home extends React.Component {
   }
 
   backClick = () => {
-    this.setState({ isShowDidInfo: false })
+    this.setState({ 
+      isShowDidInfo: false,
+      userDid: "",
+      userType: "",
+      organization: "",
+      creationDate: "",
+     })
   }
 
   render() {
