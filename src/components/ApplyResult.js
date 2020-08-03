@@ -1,6 +1,8 @@
 import React from 'react';
 import './common.css';
-import { Table, Loader, Confirm } from 'semantic-ui-react';
+import { Loader, Confirm } from 'semantic-ui-react';
+import { Table } from 'antd';
+import 'antd/dist/antd.css';
 import { connect } from 'react-redux';
 import http from '../service/httpRequest';
 import { getMenuDataAction } from '@/actions/menuAction';
@@ -17,9 +19,63 @@ class ApplyResult extends React.Component {
     constructor(props) {
         super(props);
         this.state = {
-            tableColumns: 8,
-            tableTtile: ["编号", "申请机构", "调用机构范围", "调用客户编号", "档案类型", "生成日期范围", "申请时间", "审批状态", "操作"],
+            columns: [
+                {
+                    title: '编号',
+                    dataIndex: 'index',
+                    key: 'index',
+                },
+                {
+                    title: '申请机构',
+                    dataIndex: 'applyOrg',
+                    key: 'applyOrg',
+                },
+                {
+                    title: '调用机构范围',
+                    dataIndex: 'callOrgRange',
+                    key: 'callOrgRange',
+                },
+                {
+                    title: '调用客户编号',
+                    dataIndex: 'customerNo',
+                    key: 'customerNo',
+                },
+                {
+                    title: '档案类型',
+                    dataIndex: 'docType',
+                    key: 'docType',
+                },
+                {
+                    title: '生成日期范围',
+                    dataIndex: 'docDateRange',
+                    key: 'docDateRange',
+                },
+                {
+                    title: '申请时间',
+                    dataIndex: 'creationDate',
+                    key: 'creationDate',
+                },
+                {
+                    title: '审批状态',
+                    dataIndex: 'approveStatus',
+                    key: 'approveStatus',
+                },
+                {
+                    title: '操作',
+                    dataIndex: 'operate',
+                    key: 'operate',
+                    render: (item) => <div style={{ 'display': item.approveStatus === 1 ? "inline-block" : "none" }} className="operation" onClick={this.handleMoreClick.bind(this, item)}>查看详情</div>
+                }
+            ],
             tableData: [],
+            pagination: {
+                hideOnSinglePage: true,
+                current: 1,
+                pageSize: 10,
+                showSizeChanger: true,
+                pageSizeOptions: [10, 20, 50, 100],
+                total: 0,
+            },
             isShowMoreInfo: false,
             loaderState: "disabled",
             confirmOpen: false,
@@ -28,44 +84,52 @@ class ApplyResult extends React.Component {
     }
 
     componentDidMount() {
-        this.getResultTableData();
+        let pageSize = this.state.pagination.pageSize;
+        this.getResultTableData(pageSize, 1);
     }
 
     componentWillReceiveProps(nextProps) {
-        this.getResultTableData();
+        let pageSize = this.state.pagination.pageSize;
+        this.getResultTableData(pageSize, 1);
 
     }
 
-    getResultTableData = () => {
+    getResultTableData = (pageSize, pageNum) => {
         let credentialSubjectStr = localStorage.getItem('credentialSubject');
         let credentialSubject = credentialSubjectStr ? JSON.parse(credentialSubjectStr) : {};
         let fileInformation = credentialSubject.fileInformation || {};
         let orgDidStr = localStorage.getItem('userHasDid' + fileInformation.name);
         let orgDidObj = orgDidStr ? JSON.parse(orgDidStr) : {};
         let userDid = orgDidObj[fileInformation.name];
-        http.get("consumer/docs/application/pagedlist?pageSize=200&applyUserDid=" + userDid).then((resp) => {
+        http.get("consumer/docs/application/pagedlist?pageSize=" + pageSize + "&pageNum=" + pageNum + "&applyUserDid=" + userDid).then((resp) => {
             if (resp.data && resp.data.status === 1) {
                 let newTableData = []
                 let tableDataList = resp.data.data.list;
                 for (var i = 0; i < tableDataList.length; i++) {
-                    let applyOrg = tableDataList[i].applyOrg || "";
-                    let callOrgRange = tableDataList[i].callOrgRange || "";
-                    let customerNo = tableDataList[i].customerNo || "";
-                    let docType = tableDataList[i].docType || "";
-                    let docDateRange = tableDataList[i].docDateRange || "";
-                    let creationDate = tableDataList[i].creationDate ? tableDataList[i].creationDate.split(" ")[0] : "";
-                    let producerId = tableDataList[i].producerId || "";
                     let statusToTextArr = ["未审批", "已通过", "已拒绝"]
                     let approveStatus = statusToTextArr[tableDataList[i].approveStatus]
-                    approveStatus = tableDataList[i].approveStatus === 100 ? "未查询到相关档案" : approveStatus
-                    let rowData = [producerId, applyOrg, callOrgRange, customerNo, docType, docDateRange, creationDate, approveStatus];
-                    newTableData.push(rowData);
+                    newTableData.push({
+                        index: pageNum === 1 ? i + 1 : (pageNum - 1) * pageSize + i + 1,
+                        applyOrg: tableDataList[i].applyOrg || "",
+                        callOrgRange: tableDataList[i].callOrgRange || "",
+                        customerNo: tableDataList[i].customerNo || "",
+                        docType: tableDataList[i].docType || "",
+                        docDateRange: tableDataList[i].docDateRange || "",
+                        creationDate: tableDataList[i].creationDate ? tableDataList[i].creationDate.split(" ")[0] : "",
+                        approveStatus: tableDataList[i].approveStatus === 100 ? "未查询到相关档案" : approveStatus,
+                        operate: tableDataList[i] || {}
+                    })
                 }
                 this.setState({
-                    tableColumns: 9,
-                    tableTtile: ["编号", "申请机构", "调用机构范围", "调用客户编号", "档案类型", "生成日期范围", "申请时间", "审批状态", "操作"],
                     tableData: newTableData,
-                    isShowMoreInfo: false,
+                    pagination: {
+                        current: pageNum,
+                        pageSize: pageSize,
+                        showSizeChanger: true,
+                        pageSizeOptions: [10, 20, 50, 100],
+                        total: resp.data.data.total,
+                        showTotal: total => `共 ${resp.data.data.total} 条`
+                    }
                 })
             }
         })
@@ -75,13 +139,43 @@ class ApplyResult extends React.Component {
         this.setState({
             loaderState: "active",
             isShowMoreInfo: true,
-            tableColumns: 5,
-            tableTtile: ["编号", "档案名称", "生成日期", "数据真实性", "操作"],
+            columns: [
+                {
+                    title: '编号',
+                    dataIndex: 'index',
+                    key: 'index',
+                },
+                {
+                    title: '档案名称',
+                    dataIndex: 'filName',
+                    key: 'filName',
+                },
+                {
+                    title: '生成日期',
+                    dataIndex: 'creationDate',
+                    key: 'creationDate',
+                },
+                {
+                    title: '数据真实性编号',
+                    dataIndex: 'isReal',
+                    key: 'isReal',
+                },
+                {
+                    title: '编号',
+                    dataIndex: 'operate',
+                    key: 'operate',
+                    render: (id) => <div>
+                        <div className="operation" onClick={this.seePdfDoc.bind(this, id)}>查看 </div>
+                        <div className="operation" onClick={this.download.bind(this, id)}> 下载</div>
+                    </div>
+                },
+            ],
             tableData: [],
+            pagination: {},
         })
         let tableData = [];
         // 获取详情里的文书档案列表
-        http.get("consumer/docs/filelist?docApplyId=" + rowData[0]).then((resp) => {
+        http.get("consumer/docs/filelist?docApplyId=" + rowData.producerId).then((resp) => {
             if (resp.data && resp.data.status === 1) {
                 let respList = resp.data.data;
                 this.getDocTruth(respList, (tableData) => {
@@ -112,7 +206,6 @@ class ApplyResult extends React.Component {
             useSubstrate.useSubstrateApi((api) => {
                 (async function () {
                     if (!api) { return; }
-                    // let { nonce } = await api.query.system.account(account);
                     for (var i = 0; i < resultList.length; i++) {
                         const filName = resultList[i].fileName;
                         const id = resultList[i].id || "";
@@ -123,12 +216,26 @@ class ApplyResult extends React.Component {
                             let dataStr = arcData.toString() || "";
                             console.log(dataStr)
                             let hashStr = dataStr.substring(1, dataStr.length - 1).split(",")[0];
-                            let newHashStr = hexToString(hashStr.substring(1, hashStr.length -1 ));
+                            let newHashStr = hexToString(hashStr.substring(1, hashStr.length - 1));
                             console.log(newHashStr)
                             if (newHashStr === fileHash) {
-                                tableData.push([id, filName, creationDate, "真实"]);
+                                // tableData.push([id, filName, creationDate, "真实"]);
+                                tableData.push({
+                                    index: i,
+                                    filName: filName,
+                                    creationDate: creationDate,
+                                    isReal: "真实",
+                                    operate: id
+                                });
                             } else {
-                                tableData.push([id, filName, creationDate, "伪造"]);
+                                // tableData.push([id, filName, creationDate, "伪造"]);
+                                tableData.push({
+                                    index: i,
+                                    filName: filName,
+                                    creationDate: creationDate,
+                                    isReal: "伪造",
+                                    operate: id
+                                });
                             }
 
                             if (tableData.length === resultList.length) {
@@ -140,7 +247,6 @@ class ApplyResult extends React.Component {
                             callback(tableData);
                         }
 
-                        // nonce = parseInt(nonce) + 1;
                     }
                 })();
             })
@@ -148,49 +254,34 @@ class ApplyResult extends React.Component {
 
     }
 
-    download = (rowData) => {
-        window.open("consumer/docs/downloader?id=" + rowData[0], "_self");
+    download = (id) => {
+        window.open("consumer/docs/downloader?id=" + id, "_self");
     }
 
-    seePdfDoc = (rowData) => {
-        let pdfUrl = `/pdfjs-1.9.426-dist/web/viewer.html?file=http://${window.location.hostname}:8081/consumer/docs/preview/` + rowData[0];
+    seePdfDoc = (id) => {
+        let pdfUrl = `/pdfjs-1.9.426-dist/web/viewer.html?file=http://${window.location.hostname}:8081/consumer/docs/preview/` + id;
         window.open(pdfUrl, "_blank");
     }
 
+
+    handleTablePageChange = (pagination) => {
+        let pageSize = pagination.pageSize;
+        let pageNum = pagination.current;
+        this.getResultTableData(pageSize, pageNum)
+    }
 
 
     render() {
         return (
             <div style={{ 'width': '99%' }} id="applyListDiv" >
-                <Table columns={this.state.tableColumns} id="applyTableList">
-                    <Table.Header>
-                        <Table.Row>
-                            {this.state.tableTtile.map((item, key) => {
-                                return (<Table.HeaderCell key={key}>{item}</Table.HeaderCell>)
-                            })
-                            }
-                        </Table.Row>
-                    </Table.Header>
-                    <Table.Body>
-                        {this.state.tableData.map((item, num) => {
-                            return (<Table.Row key={num}>{
-                                item.map((value, index) => {
-                                    return (<Table.Cell key={index}>{index === 0 ? num : value}</Table.Cell>)
-                                })
-                            }
-                                {this.state.isShowMoreInfo ?
-                                    <Table.Cell>
-                                        <div className="operation" onClick={this.seePdfDoc.bind(this, item)}>查看 </div>
-                                        <div className="operation" onClick={this.download.bind(this, item)}> 下载</div>
-                                    </Table.Cell>
-                                    : <Table.Cell>
-                                        <div style={{ 'display': item[7] === "已通过" ? "inline-block" : "none" }} className="operation" onClick={this.handleMoreClick.bind(this, item)}>查看详情</div>
-                                    </Table.Cell>
-                                }
-                            </Table.Row>)
-                        })}
-                    </Table.Body>
-                </Table>
+                <Table
+                    bordered
+                    columns={this.state.columns}
+                    dataSource={this.state.tableData}
+                    onChange={this.handleTablePageChange}
+                    onShowSizeChange={this.handlePageSizeChange}
+                    pagination={this.state.pagination}
+                />
                 <Loader className={this.state.loaderState} ></Loader>
                 <Confirm
                     open={this.state.confirmOpen}

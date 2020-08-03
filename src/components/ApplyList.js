@@ -1,6 +1,8 @@
 import React from 'react';
 import './common.css';
-import { Table, Loader, Confirm } from 'semantic-ui-react';
+import { Loader, Confirm } from 'semantic-ui-react';
+import { Table } from 'antd';
+import 'antd/dist/antd.css';
 import { connect } from 'react-redux';
 import http from '../service/httpRequest.js';
 import $ from 'jquery';
@@ -9,9 +11,6 @@ import useSubstrate from '../service/userSubstrateRequest.js';
 const testKeyring = require('@polkadot/keyring/testing');
 const keyring = testKeyring.default();
 
-
-const tableTtile = ["编号", "申请机构", "调用客户编号", "档案类型", "生成日期范围", "指派人员", "申请日期", "操作"];
-
 class ApplyList extends React.Component {
     constructor(props) {
         super(props);
@@ -19,29 +18,106 @@ class ApplyList extends React.Component {
             loaderState: "disabled",
             confirmOpen: false,
             messageContent: '',
-            tableData: [
-                // {"authOrg": "建设银行办公室","customerNo": "20200708","docType": "文书档案","startDate": "16587800000","endDate": "156090340000","operator": "张三","creationDate": "1593705600000","approveStatus": "0","receiveMail": "limengran0911@163.com"}
+            columns: [
+                {
+                    title: '编号',
+                    dataIndex: 'index',
+                    key: 'index',
+                },
+                {
+                    title: '申请机构',
+                    dataIndex: 'authOrg',
+                    key: 'authOrg',
+                },
+                {
+                    title: '调用客户编号',
+                    dataIndex: 'customerNo',
+                    key: 'customerNo',
+                },
+                {
+                    title: '档案类型',
+                    dataIndex: 'docType',
+                    key: 'docType',
+                },
+                {
+                    title: '生成日期范围',
+                    dataIndex: 'dateRange',
+                    key: 'dateRange',
+                },
+                {
+                    title: '指派人员',
+                    dataIndex: 'operator',
+                    key: 'operator',
+                },
+                {
+                    title: '申请日期',
+                    dataIndex: 'creationDate',
+                    key: 'creationDate',
+                },
+                {
+                    title: '操作',
+                    dataIndex: 'operate',
+                    key: 'operate',
+                    render: (item) => item.approveStatus === 3 ? <div>已撤销</div> : (item.approveStatus === 2 ? <div>已拒绝</div> :
+                        <div>
+                            <div className="operation" onClick={this.handleAgreeClick.bind(this, item.approveStatus, item)} >
+                                {item.approveStatus === 1 ? "撤销" : "同意"}
+                            </div>
+                            <div className="operation" onClick={this.handleRefuseClick.bind(this, item.approveStatus, item)} style={{ 'display': item.approveStatus !== 0 ? "none" : "inline-block" }}>
+                                拒绝
+                            </div>
+                        </div>)
+
+                }
             ],
+            tableData: [],
+            pagination: {
+                hideOnSinglePage: true,
+                current: 1,
+                pageSize: 10,
+                showSizeChanger: true,
+                pageSizeOptions: [10, 20, 50, 100],
+                total: 0,
+            }
         }
     }
 
     componentDidMount() {
-        http.get("producer/vcs/application/pagedlist?pageSize=200").then((resp) => {
+        let pageSize = this.state.pagination.pageSize;
+        this.loadTbaleData(pageSize, 1);
+    }
+
+    loadTbaleData = (pageSize, pageNum) => {
+        http.get("producer/vcs/application/pagedlist?pageSize=" + pageSize + "&pageNum=" + pageNum).then((resp) => {
             if (resp.data && resp.data.status === 1) {
                 let resultData = resp.data.data ? resp.data.data : {};
                 let tableData = resultData.list;
                 let newTableData = [];
                 for (var i = 0; i < tableData.length; i++) {
-                    if (tableData[i].approveStatus === 0 || tableData[i].approveStatus === 1 ) {
-                        newTableData.push(tableData[i])
-                    }
+                    newTableData.push({
+                        index: pageNum === 1 ? i + 1 : (pageNum - 1) * pageSize + i + 1,
+                        authOrg: tableData[i].authOrg,
+                        customerNo: tableData[i].customerNo,
+                        docType: tableData[i].docType,
+                        dateRange: this.getDateStr(tableData[i].startDate) + "~" + this.getDateStr(tableData[i].endDate),
+                        operator: tableData[i].operator,
+                        creationDate: this.getDateStr(tableData[i].creationDate),
+                        operate: tableData[i],
+                    })
                 }
                 this.setState({
                     tableData: newTableData,
+                    pagination: {
+                        current: pageNum,
+                        pageSize: pageSize,
+                        showSizeChanger: true,
+                        pageSizeOptions: [10, 20, 50, 100],
+                        total: resultData.total,
+                        showTotal: total => `共 ${resultData.total} 条`
+                    }
                 })
             }
         })
-
     }
 
     handleAgreeClick = (key, rowData, e) => {
@@ -54,7 +130,7 @@ class ApplyList extends React.Component {
         const orgrHasPrivateKeyStr = localStorage.getItem("orgrHasPrivateKey" + userName) || "";
         const orgPrivateKey = orgrHasPrivateKeyStr ? JSON.parse(orgrHasPrivateKeyStr)[rowData.authOrg] : "";
 
-        if ($("#agreeButton" + key).html() === "同意") {
+        if (key === 0) {
             let newRowData = JSON.parse(JSON.stringify(rowData));
             newRowData.approveStatus = 1;
             http.post("producer/vcs/approval", newRowData).then((resp) => {
@@ -66,8 +142,7 @@ class ApplyList extends React.Component {
                             if (status.isInBlock) {
                                 events.forEach(({ event: { data, method, section }, phase }) => {
                                     if (section === 'system' && method === 'ExtrinsicSuccess') {
-                                        $("#agreeButton" + key).html("撤销");
-                                        $("#refuseButton" + key).css("display", 'none');
+                                        this.loadTbaleData(this.state.pagination.pageSize, 1);
                                         this.setState({
                                             confirmOpen: true,
                                             messageContent: '操作成功',
@@ -112,16 +187,12 @@ class ApplyList extends React.Component {
                             if (status.isInBlock) {
                                 events.forEach(({ event: { data, method, section }, phase }) => {
                                     if (section === 'system' && method === 'ExtrinsicSuccess') {
-                                        let tableData = this.state.tableData;
-                                        tableData.splice(key, 1);
+                                        this.loadTbaleData(this.state.pagination.pageSize, 1);
                                         this.setState({
                                             confirmOpen: true,
                                             messageContent: '操作成功',
-                                            tableData: tableData,
                                             loaderState: "disabled",
                                         })
-                                        $("#agreeButton" + key).html("同意");
-                                        $("#refuseButton" + key).css("display", 'inline-block');
                                     } else if (section === 'system' && method === 'ExtrinsicFailed') {
                                         const [error, info] = data;
                                         if (error.isModule) {
@@ -161,10 +232,8 @@ class ApplyList extends React.Component {
         newRowData.approveStatus = 2;
         http.post("producer/vcs/approval", newRowData).then((resp) => {
             if (resp.data && resp.data.status === 1) {
-                let tableData = this.state.tableData;
-                tableData.splice(key, 1);
+                this.loadTbaleData(this.state.pagination.pageSize, 1);
                 this.setState({
-                    tableData: tableData,
                     loaderState: "disabled",
                 })
             } else {
@@ -198,41 +267,24 @@ class ApplyList extends React.Component {
         })
     }
 
+    handleTablePageChange = (pagination) => {
+        let pageSize = pagination.pageSize;
+        let pageNum = pagination.current;
+        this.loadTbaleData(pageSize, pageNum)
+    }
 
     render() {
         return (
             <div style={{ 'width': '99%' }} id="applyListDiv">
                 <p className="tableTtile">申请列表</p>
-                <Table columns={8} id="applyTableList">
-                    <Table.Header>
-                        <Table.Row>
-                            {tableTtile.map((item, key) => {
-                                return (<Table.HeaderCell key={key}>{item}</Table.HeaderCell>)
-                            })
-                            }
-                        </Table.Row>
-                    </Table.Header>
-                    <Table.Body>
-                        {this.state.tableData.map((item, key) => {
-                            return (<Table.Row key={key}>
-                                <Table.Cell >{key}</Table.Cell>
-                                <Table.Cell>{item.authOrg}</Table.Cell>
-                                <Table.Cell>{item.customerNo}</Table.Cell>
-                                <Table.Cell>{item.docType}</Table.Cell>
-                                <Table.Cell>{this.getDateStr(item.startDate) + "~" + this.getDateStr(item.endDate)}</Table.Cell>
-                                <Table.Cell>{item.operator}</Table.Cell>
-                                <Table.Cell>{this.getDateStr(item.creationDate)}</Table.Cell>
-                                <Table.Cell>
-                                    {<div>
-                                        <div className="operation" id={"agreeButton" + key} onClick={this.handleAgreeClick.bind(this, key, item)} >{item.approveStatus === 1 ? "撤销" : "同意"}</div>
-                                        <div className="operation" id={"refuseButton" + key} onClick={this.handleRefuseClick.bind(this, key, item)} style={{ 'display': item.approveStatus !== 0 ? "none" : "inline-block" }}>拒绝</div>
-                                    </div>}
-                                </Table.Cell>
-                            </Table.Row>)
-                        })}
-
-                    </Table.Body>
-                </Table>
+                <Table
+                    bordered
+                    columns={this.state.columns}
+                    dataSource={this.state.tableData}
+                    onChange={this.handleTablePageChange}
+                    onShowSizeChange={this.handlePageSizeChange}
+                    pagination={this.state.pagination}
+                />
                 <Loader className={this.state.loaderState} ></Loader>
                 <Confirm
                     open={this.state.confirmOpen}
@@ -240,7 +292,7 @@ class ApplyList extends React.Component {
                     onCancel={this.handleCancel}
                     onConfirm={this.handleConfirm}
                 />
-            </div>
+            </div >
         )
     }
 }

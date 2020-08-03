@@ -1,44 +1,127 @@
 import React from 'react';
 import './common.css';
-import { Table, Loader, Confirm } from 'semantic-ui-react';
+import { Loader, Confirm } from 'semantic-ui-react';
+import { Table } from 'antd';
+import 'antd/dist/antd.css';
 import { connect } from 'react-redux';
 import * as COMMON from '../tools/CommonConstant';
 import http from '../service/httpRequest';
 import { resolvePlugin } from '@babel/core';
 
-const tableTtile = ["编号", "申请机构", "调用客户编号", "档案类型", "生成日期范围", "申请人", "申请日期", "授权真实性", "操作"];
-const tableData = [
-]
+
 
 class ApprovalList extends React.Component {
     constructor(props) {
         super(props);
         this.state = {
-            tableData: tableData,
+            tableData: [],
             loaderState: "disabled",
             confirmOpen: false,
             messageContent: '',
+            columns: [
+                {
+                    title: '编号',
+                    dataIndex: 'index',
+                    key: 'index',
+                },
+                {
+                    title: '申请机构',
+                    dataIndex: 'applyOrg',
+                    key: 'applyOrg',
+                },
+                {
+                    title: '调用客户编号',
+                    dataIndex: 'customerNo',
+                    key: 'customerNo',
+                },
+                {
+                    title: '档案类型',
+                    dataIndex: 'docType',
+                    key: 'docType',
+                },
+                {
+                    title: '生成日期范围',
+                    dataIndex: 'docDateRange',
+                    key: 'docDateRange',
+                },
+                {
+                    title: '申请人',
+                    dataIndex: 'applyUser',
+                    key: 'applyUser',
+                },
+                {
+                    title: '申请日期',
+                    dataIndex: 'creationDate',
+                    key: 'creationDate',
+                },
+                {
+                    title: '授权真实性',
+                    dataIndex: 'vcReal',
+                    key: 'vcReal',
+                },
+                {
+                    title: '操作',
+                    dataIndex: 'operate',
+                    key: 'operate',
+                    render: (item) => item.approveStatus === 0 ?
+                        <div>
+                            <div className="operation" onClick={this.handleAgreeClick.bind(this, item)}>同意</div>
+                            <div className="operation" onClick={this.handleRefuseClick.bind(this, item)}>拒绝</div>
+                        </div>
+                        :  ( item.approveStatus === 1 ? <div>已同意</div> : <div>已拒绝</div>) 
+
+                }
+            ],
+            pagination: {
+                hideOnSinglePage: true,
+                current: 1,
+                pageSize: 10,
+                showSizeChanger: true,
+                pageSizeOptions: [10, 20, 50, 100],
+                total: 0,
+            }
         }
     }
 
     componentDidMount() {
-        http.get("admin/docs/application/list?pageSize=200").then((resp) => {
+        let pageSize = this.state.pagination.pageSize;
+        this.loadTbaleData(pageSize, 1);
+    }
+
+    loadTbaleData = (pageSize, pageNum) => {
+        http.get("admin/docs/application/list?pageSize=" + pageSize + "&pageNum=" + pageNum).then((resp) => {
             if (resp.data && resp.data.status === 1) {
                 let tableDataList = resp.data.data.list;
                 let newTbaleData = []
                 for (var i = 0; i < tableDataList.length; i++) {
-                    if (tableDataList[i].approveStatus === 0) {
-                        newTbaleData.push(tableDataList[i]);
-                    }
+                    newTbaleData.push({
+                        index: pageNum === 1 ? i + 1 : (pageNum - 1) * pageSize + i + 1,
+                        applyOrg: tableDataList[i].applyOrg,
+                        customerNo: tableDataList[i].customerNo,
+                        docType: tableDataList[i].docType,
+                        docDateRange: tableDataList[i].docDateRange,
+                        applyUser: tableDataList[i].applyUser,
+                        creationDate: this.getDateStr(tableDataList[i].creationDate),
+                        vcReal: tableDataList[i].vcReal === 1 ? "真实" : "伪造",
+                        operate: tableDataList[i]
+                    });
                 }
                 this.setState({
-                    tableData: newTbaleData
+                    tableData: newTbaleData,
+                    pagination: {
+                        current: pageNum,
+                        pageSize: pageSize,
+                        showSizeChanger: true,
+                        pageSizeOptions: [10, 20, 50, 100],
+                        total: resp.data.data.total,
+                        showTotal: total => `共 ${resp.data.data.total} 条`
+                    }
                 })
             }
         })
     }
 
-    handleAgreeClick = (key, rowData) => {
+    handleAgreeClick = (rowData) => {
         this.setState({
             loaderState: "active",
         })
@@ -46,10 +129,8 @@ class ApprovalList extends React.Component {
         newRowData.approveStatus = 1;
         http.post("admin/docs/approval", newRowData).then((resp) => {
             if (resp.data && resp.data.status === 1) {
-                let tableData = this.state.tableData;
-                tableData.splice(key, 1);
+                this.loadTbaleData(this.state.pagination.pageSize, 1);
                 this.setState({
-                    tableData: tableData,
                     messageContent: "操作成功",
                     loaderState: "disabled",
                 })
@@ -63,7 +144,7 @@ class ApprovalList extends React.Component {
         })
     }
 
-    handleRefuseClick = (key, rowData) => {
+    handleRefuseClick = (rowData) => {
         this.setState({
             loaderState: "active",
         })
@@ -71,10 +152,8 @@ class ApprovalList extends React.Component {
         newRowData.approveStatus = 2;
         http.post("admin/docs/approval", newRowData).then((resp) => {
             if (resp.data && resp.data.status === 1) {
-                let tableData = this.state.tableData;
-                tableData.splice(key, 1);
+                this.loadTbaleData(this.state.pagination.pageSize, 1);
                 this.setState({
-                    tableData: tableData,
                     messageContent: "操作成功",
                     loaderState: "disabled",
                 })
@@ -108,39 +187,24 @@ class ApprovalList extends React.Component {
         })
     }
 
+    handleTablePageChange = (pagination) => {
+        let pageSize = pagination.pageSize;
+        let pageNum = pagination.current;
+        this.loadTbaleData(pageSize, pageNum)
+    }
+
     render() {
         return (
             <div style={{ 'width': '99%' }} id="applyListDiv">
                 <p className="tableTtile">申请列表</p>
-                <Table columns={9} id="applyTableList">
-                    <Table.Header>
-                        <Table.Row>
-                            {tableTtile.map((item, key) => {
-                                return (<Table.HeaderCell key={key}>{item}</Table.HeaderCell>)
-                            })
-                            }
-                        </Table.Row>
-                    </Table.Header>
-                    <Table.Body>
-                        {this.state.tableData.map((item, key) => {
-                            return (<Table.Row key={key}>
-                                <Table.Cell>{key}</Table.Cell>
-                                <Table.Cell>{item.applyOrg}</Table.Cell>
-                                <Table.Cell>{item.customerNo}</Table.Cell>
-                                <Table.Cell>{item.docType}</Table.Cell>
-                                <Table.Cell>{item.docDateRange}</Table.Cell>
-                                <Table.Cell>{item.applyUser}</Table.Cell>
-                                <Table.Cell>{this.getDateStr(item.creationDate)}</Table.Cell>
-                                <Table.Cell>{item.vcReal === 1 ? "真实" : "伪造"}</Table.Cell>
-                                <Table.Cell>
-                                    <div className="operation" onClick={this.handleAgreeClick.bind(this, key, item)}>同意</div>
-                                    <div className="operation" onClick={this.handleRefuseClick.bind(this, key, item)}>拒绝</div>
-                                </Table.Cell>
-                            </Table.Row>)
-                        })}
-
-                    </Table.Body>
-                </Table>
+                <Table
+                    bordered
+                    columns={this.state.columns}
+                    dataSource={this.state.tableData}
+                    onChange={this.handleTablePageChange}
+                    onShowSizeChange={this.handlePageSizeChange}
+                    pagination={this.state.pagination}
+                />
                 <Loader className={this.state.loaderState} ></Loader>
                 <Confirm
                     open={this.state.confirmOpen}
