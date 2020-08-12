@@ -155,6 +155,9 @@ class DocUpload extends React.Component {
     }
 
     submitClick = () => {
+        if (this.state.numMessage.length > 0) {
+            return;
+        }
         this.setState({ loaderState: "active" })
         let range = this.state.range > 0 || (!this.state.range && this.state.range === 0);
         let producer = this.state.producer > 0 || (!this.state.producer && this.state.producer === 0);

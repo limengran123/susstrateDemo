@@ -53,5 +53,9 @@ const routes=[
     path:'/didRegister',
     component:asyncComponents(()=>import("@/pages/Home")), 
   },
+  {
+    path: '',
+    component:asyncComponents(()=>import("@/pages/Overview")), 
+  }
 ];
 export default routes;

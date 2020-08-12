@@ -207,3 +207,33 @@
 .buttonArr #cancalButton{
   margin: 0 1rem 0 -3rem;
 }
+.overviewHeaderText {
+  padding-top: 1.5rem;
+  margin-left: 2rem;
+  font-size: 1rem;
+  color: #fff;
+}
+
+.contentRow {
+  margin: 3rem 0 0 2rem;
+}
+
+.contentCol {
+  width: 250px;
+  height: 120px;
+  background-color: #0D8FBF;
+  border-radius: 5%;
+  margin:0 5rem 0 2rem;
+  display: inline-block;
+}
+
+.contentColText {
+  font-size: 1rem;
+  color: #fff;
+  margin: 1rem 0 0 1rem;
+  padding: 3.5rem 0 0 1.8rem;
+}
+
+.overviewContent .contentRow:nth-child(1) {
+  margin-top: 1.5rem;
+}
